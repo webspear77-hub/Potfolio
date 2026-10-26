@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-cream: #F5F1E8;
+    --color-dark: #111111;
+    --color-accent: #FFA81F;
+    --color-accent-hover: #E59415;
+    --color-surface-dark: #1A1A1A;
+  }
+
+  body {
+    background-color: #F5F1E8;
+    color: #111111;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Outfit', 'Syne', sans-serif;
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 18s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 24s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F1E8;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFA81F;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E59415;
+}
