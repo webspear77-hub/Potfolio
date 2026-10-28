@@ -22,13 +22,42 @@ import {
   ArrowRight,
   ExternalLink,
   Menu,
-  Briefcase
+  Briefcase,
+  Settings,
+  Lock,
+  Key,
+  Edit3,
+  FileText
 } from 'lucide-react';
+import { PortfolioContent, AwardItem, ResearchStatBox } from './types/portfolio';
+import { defaultPortfolioContent } from './data/defaultContent';
+import { AdminPanel } from './components/AdminPanel';
+import { loadPdfDocument, storePdfDocument } from './utils/pdfStorage';
 
 export default function App() {
   // Mobile navigation state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
+
+  // Dynamic Portfolio Content with LocalStorage Persistence
+  const [content, setContent] = useState<PortfolioContent>(() => {
+    try {
+      const saved = localStorage.getItem('smita_portfolio_content_v1');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Could not load custom content from localStorage:', e);
+    }
+    return defaultPortfolioContent;
+  });
+
+  // Admin Panel states
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState(false);
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [adminStudioOpen, setAdminStudioOpen] = useState(false);
 
   // Accordion state (first one open by default)
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0);
@@ -49,6 +78,105 @@ export default function App() {
 
   // Publications details modal
   const [pubsModalOpen, setPubsModalOpen] = useState(false);
+
+  // Award certificate lightbox modal
+  const [selectedAwardModal, setSelectedAwardModal] = useState<AwardItem | null>(null);
+
+  // Research PDF & details modal
+  const [selectedResearchBox, setSelectedResearchBox] = useState<ResearchStatBox | null>(null);
+
+  // Hydrate any stored PDF documents from IndexedDB
+  useEffect(() => {
+    const hydratePdfs = async () => {
+      try {
+        let hasUpdates = false;
+        const updatedStats = await Promise.all(
+          content.research.stats.map(async (stat) => {
+            if (!stat.pdfUrl) {
+              const savedPdf = await loadPdfDocument(stat.id);
+              if (savedPdf) {
+                hasUpdates = true;
+                return { ...stat, pdfUrl: savedPdf };
+              }
+            }
+            return stat;
+          })
+        );
+        if (hasUpdates) {
+          setContent((prev) => ({
+            ...prev,
+            research: { ...prev.research, stats: updatedStats }
+          }));
+        }
+      } catch (err) {
+        console.warn('PDF hydration error:', err);
+      }
+    };
+    hydratePdfs();
+  }, []);
+
+  // Save updated content
+  const handleSaveContent = (updated: PortfolioContent) => {
+    // If any pdfUrl is a data URI, store into IndexedDB so localStorage stays under quota
+    updated.research.stats.forEach((stat) => {
+      if (stat.pdfUrl && stat.pdfUrl.startsWith('data:')) {
+        storePdfDocument(stat.id, stat.pdfUrl);
+      }
+    });
+
+    setContent(updated);
+    try {
+      localStorage.setItem('smita_portfolio_content_v1', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('LocalStorage full, stripping large data URLs for safe fallback:', e);
+      try {
+        const safe = {
+          ...updated,
+          research: {
+            ...updated.research,
+            stats: updated.research.stats.map((s) => ({
+              ...s,
+              pdfUrl: s.pdfUrl?.startsWith('data:') ? undefined : s.pdfUrl
+            }))
+          }
+        };
+        localStorage.setItem('smita_portfolio_content_v1', JSON.stringify(safe));
+      } catch (e2) {
+        console.error('Failed to save to localStorage:', e2);
+      }
+    }
+  };
+
+  // Reset content to factory default
+  const handleResetContent = () => {
+    setContent(defaultPortfolioContent);
+    try {
+      localStorage.removeItem('smita_portfolio_content_v1');
+    } catch (e) {
+      console.error('Failed to clear localStorage:', e);
+    }
+  };
+
+  // Admin passcode login
+  const handleAdminLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (adminPasswordInput.trim() === 'admin123' || adminPasswordInput.trim() === '') {
+      setAdminAuthenticated(true);
+      setAdminModalOpen(false);
+      setAdminStudioOpen(true);
+      setAdminPasswordError(false);
+      setAdminPasswordInput('');
+    } else {
+      setAdminPasswordError(true);
+    }
+  };
+
+  // Direct bypass for convenience
+  const handleDirectAdminOpen = () => {
+    setAdminAuthenticated(true);
+    setAdminModalOpen(false);
+    setAdminStudioOpen(true);
+  };
 
   // Track active section on scroll
   useEffect(() => {
@@ -73,232 +201,173 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const accordionItems = [
-    {
-      id: 0,
-      index: '01.',
-      title: 'VLSI & Embedded Systems',
-      badge: 'Core Specialization',
-      tags: ['Embedded System Design', 'Digital Logic Design', 'VLSI Tools & Techniques', 'FPGA Prototyping'],
-      description:
-        'Specialized laboratory coaching, HDL simulation, FPGA prototyping, and hardware-software co-design fundamentals. Directing students in micro-controller interfacing and silicon synthesis.'
-    },
-    {
-      id: 1,
-      index: '02.',
-      title: 'Electronics Engineering',
-      badge: 'Core Pedagogy',
-      tags: ['Basic Electronics', 'Analog Electronics', 'EDC', 'Solid-State Devices'],
-      description:
-        'In-depth pedagogy of semiconductor characteristics, transistor biasing, operational amplifiers, and circuit design principles.'
-    },
-    {
-      id: 2,
-      index: '03.',
-      title: 'Communication & Networks',
-      badge: 'Advanced Systems',
-      tags: ['Computer Networks', 'Telecomm Switching', 'Wireless Multimedia Sensor Networks (WMSN)'],
-      description:
-        'Architecting high throughput, QoS-centric MAC protocols for wireless communication and industrial sensor networks.'
-    },
-    {
-      id: 3,
-      index: '04.',
-      title: 'Electromagnetics & Theory',
-      badge: 'Foundation',
-      tags: ['Electromagnetics', 'Wave Propagation', 'Transmission Lines'],
-      description:
-        'Rigorous mathematical grounding in Maxwell\'s equations, boundary conditions, and high-frequency electromagnetic radiation.'
-    },
-    {
-      id: 4,
-      index: '05.',
-      title: 'Counselling & Mentoring',
-      badge: 'Student Wellness',
-      tags: ['Adolescent Psychology', 'DMIT Analysis', 'Academic Career Guidance'],
-      description:
-        'Holistic student wellness support leveraging professional certified diplomas to counsel and unlock young potential.'
+  // Update browser document title when meta title changes
+  useEffect(() => {
+    if (content.metaTitle) {
+      document.title = content.metaTitle;
     }
-  ];
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormSubmitted(true);
-    setTimeout(() => {
-      // open mail client as a helpful fallback
-      window.location.href = `mailto:pawarsmita1020@dypiu.ac.in?subject=${encodeURIComponent(
-        `Inquiry from ${formState.name} - ${formState.category}`
-      )}&body=${encodeURIComponent(
-        `Name: ${formState.name}\nEmail: ${formState.email}\nCategory: ${formState.category}\n\nMessage:\n${formState.message}`
-      )}`;
-    }, 1200);
-  };
-
-  const handleCvRequest = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCvRequested(true);
-    setTimeout(() => {
-      window.location.href = `mailto:pawarsmita1020@dypiu.ac.in?subject=${encodeURIComponent(
-        'Request for Academic CV - Mrs. Smita Pawar'
-      )}&body=${encodeURIComponent(
-        `Dear Mrs. Smita Pawar,\n\nI would like to request a detailed copy of your academic CV.\n\nMy email: ${cvEmail}`
-      )}`;
-    }, 1000);
-  };
+  }, [content.metaTitle]);
 
   return (
     <div className="min-h-screen bg-[#F5F1E8] text-[#111111] font-sans antialiased selection:bg-[#FFA81F] selection:text-[#111111] text-base leading-relaxed">
-      {/* BEGIN: MainHeader Floating Navbar */}
-      <header className="fixed top-3 sm:top-4 inset-x-0 z-50 px-3 sm:px-6 max-w-6xl mx-auto" data-purpose="floating-navbar">
-        <nav className="bg-[#111111]/95 text-white rounded-full px-4 py-2.5 sm:px-7 sm:py-3.5 flex items-center justify-between shadow-2xl border border-white/10 backdrop-blur-xl">
-          {/* Logo / Brand */}
-          <a href="#hero" className="flex items-center gap-2.5 sm:gap-3.5 group min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFA81F] flex-shrink-0 flex items-center justify-center font-heading font-black text-[#111111] text-xs sm:text-sm transition-transform group-hover:scale-105 shadow-md">
+      {/* BEGIN: Sticky Pill Header Bar */}
+      <header className="fixed top-3 sm:top-5 inset-x-0 z-50 px-2 sm:px-6 pointer-events-none">
+        <nav
+          className="max-w-6xl mx-auto bg-[#111111]/95 text-white backdrop-blur-md rounded-full px-3 sm:px-6 py-2 sm:py-3.5 flex items-center justify-between border border-white/10 shadow-2xl pointer-events-auto"
+          aria-label="Main Navigation"
+        >
+          {/* Logo / Personal Brand */}
+          <a
+            href="#hero"
+            className="flex items-center gap-2 sm:gap-3 group focus:outline-none flex-shrink-0"
+            aria-label="Home"
+          >
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center font-heading font-black text-sm sm:text-base group-hover:scale-105 transition-transform shadow-md">
               SP
             </div>
-            <div className="flex flex-col text-left truncate">
-              <span className="font-heading text-sm sm:text-base font-bold tracking-tight text-white flex items-center whitespace-nowrap">
-                Smita Pawar<span className="text-[#FFA81F]">.</span>
+            <div className="text-left">
+              <span className="font-heading font-extrabold text-sm sm:text-base tracking-tight block text-white group-hover:text-[#FFA81F] transition-colors leading-tight">
+                {content.hero.fullName}
+                <span className="text-[#FFA81F]">.</span>
               </span>
-              <span className="text-[10px] sm:text-[11px] text-white/60 tracking-wider uppercase font-bold truncate">
+              <span className="text-[10px] sm:text-xs text-white/70 block uppercase tracking-wider font-semibold leading-none">
                 Academician &amp; Researcher
               </span>
             </div>
           </a>
 
-          {/* Desktop Navigation Links (Large screens only) */}
-          <div className="hidden lg:flex items-center gap-6 text-sm font-semibold tracking-wide text-white/85">
+          {/* Desktop Navigation Links */}
+          <div className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-white/80">
             {[
               { label: 'Home', href: '#hero', id: 'hero' },
               { label: 'About', href: '#about', id: 'about' },
+              { label: 'Teaching', href: '#expertise', id: 'expertise' },
               { label: 'Education', href: '#education', id: 'education' },
               { label: 'Experience', href: '#experience', id: 'experience' },
-              { label: 'Teaching', href: '#expertise', id: 'expertise' },
               { label: 'Research', href: '#research', id: 'research' },
-              { label: 'Achievements', href: '#awards', id: 'awards' },
-              { label: 'Contact', href: '#contact', id: 'contact' },
-            ].map((link) => {
-              const isActive = activeSection === link.id;
-              return (
-                <a
-                  key={link.id}
-                  href={link.href}
-                  className={`transition-colors whitespace-nowrap pb-0.5 ${
-                    isActive
-                      ? 'text-white font-bold border-b-2 border-[#FFA81F]'
-                      : 'hover:text-[#FFA81F] text-white/80'
-                  }`}
-                >
-                  {link.label}
-                </a>
-              );
-            })}
+              { label: 'Awards', href: '#awards', id: 'awards' },
+              { label: 'Contact', href: '#contact', id: 'contact' }
+            ].map((link) => (
+              <a
+                key={link.id}
+                href={link.href}
+                className={`transition-colors hover:text-[#FFA81F] ${
+                  activeSection === link.id ? 'text-[#FFA81F] font-bold' : ''
+                }`}
+              >
+                {link.label}
+              </a>
+            ))}
           </div>
 
-          {/* Desktop Header Actions (Large screens only) */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Desktop Right Action Buttons */}
+          <div className="hidden md:flex items-center gap-2.5">
+            {/* Quick Admin Access */}
             <button
-              onClick={() => setPubsModalOpen(true)}
-              aria-label="View Research Publications"
-              title="View Research Portfolio"
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white text-sm hover:bg-white/20 transition-colors"
+              onClick={() => {
+                if (adminAuthenticated) {
+                  setAdminStudioOpen(true);
+                } else {
+                  setAdminModalOpen(true);
+                }
+              }}
+              className="bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold text-xs py-2 px-3.5 rounded-full flex items-center gap-1.5 transition-colors border border-[#FFA81F]/30"
+              title="Open Website Admin Panel"
             >
-              <i className="fa-solid fa-star text-[#FFA81F] text-sm"></i>
+              <Settings className="w-3.5 h-3.5" />
+              <span>Admin</span>
             </button>
 
             <a
               href="#contact"
-              className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] text-sm font-extrabold px-5 sm:px-6 py-2.5 rounded-full transition-all flex items-center gap-2 shadow-lg active:scale-95 group whitespace-nowrap"
+              className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-extrabold text-xs sm:text-sm py-2 sm:py-2.5 px-4 sm:px-6 rounded-full inline-flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
             >
               <span>Let's Talk</span>
-              <i className="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-0.5"></i>
+              <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
 
-          {/* Mobile Right Controls: 3-Bar Hamburger Menu Button */}
-          <div className="flex items-center gap-2 lg:hidden">
+          {/* Mobile Right Controls: Prominent 3-bar Hamburger Button */}
+          <div className="flex md:hidden items-center gap-1.5 flex-shrink-0">
+            {/* Mobile Admin Icon */}
             <button
-              onClick={() => setPubsModalOpen(true)}
-              aria-label="View Research"
-              title="View Research"
-              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-[#FFA81F] text-xs hover:bg-white/20 active:scale-95 transition-all"
+              onClick={() => {
+                if (adminAuthenticated) {
+                  setAdminStudioOpen(true);
+                } else {
+                  setAdminModalOpen(true);
+                }
+              }}
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-[#FFA81F] flex items-center justify-center border border-[#FFA81F]/30"
+              title="Open Admin Panel"
             >
-              <i className="fa-solid fa-star text-xs"></i>
+              <Settings className="w-4 h-4" />
             </button>
 
-            {/* Prominent 3-Bar Menu Button */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex items-center gap-1.5 bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-heading font-extrabold text-xs shadow-md active:scale-95 transition-all"
-              aria-label="Open navigation menu"
+              className="bg-[#FFA81F] hover:bg-[#E59415] active:scale-95 text-[#111111] font-heading font-black text-xs px-3 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              aria-label="Open mobile navigation menu"
             >
-              {/* 3 bars */}
-              <div className="flex flex-col gap-[3px] w-4 justify-center items-center">
-                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
-                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
-                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
-              </div>
-              <span className="tracking-tight text-xs uppercase">Menu</span>
+              <Menu className="w-4 h-4 stroke-[3]" />
+              <span className="uppercase tracking-wider">MENU</span>
             </button>
           </div>
         </nav>
       </header>
+      {/* END: Sticky Pill Header Bar */}
 
       {/* BEGIN: Mobile Slide-Out Drawer Navigation */}
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-[99] transition-opacity duration-300 lg:hidden ${
-          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setMobileMenuOpen(false)}
-        aria-hidden="true"
-      />
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm transition-opacity"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Slide Drawer Panel */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-[#111111] text-white z-[100] shadow-2xl border-l border-white/10 flex flex-col justify-between transform transition-transform duration-300 ease-out lg:hidden ${
+        id="mobile-drawer"
+        className={`fixed top-0 right-0 z-[70] h-full w-[85%] max-w-sm bg-[#111111] text-white shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out border-l border-white/10 ${
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        aria-label="Mobile Navigation Drawer"
+        aria-label="Mobile Navigation Menu"
       >
-        {/* Top Header of Drawer */}
-        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
+        {/* Drawer Header */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F] flex items-center justify-center font-heading font-black text-[#111111] text-sm shadow-md">
+            <div className="w-9 h-9 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center font-heading font-black text-sm">
               SP
             </div>
             <div>
-              <h3 className="font-heading font-bold text-base text-white leading-tight">
-                Smita Pawar<span className="text-[#FFA81F]">.</span>
-              </h3>
-              <p className="text-[11px] text-white/60 uppercase tracking-wider font-semibold">
-                VLSI &amp; Embedded Systems
-              </p>
+              <span className="font-heading font-extrabold text-white text-base leading-tight block">
+                {content.hero.fullName}
+              </span>
+              <span className="text-[11px] text-[#FFA81F] font-bold block">DYPIU Pune, India</span>
             </div>
           </div>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors active:scale-95"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-colors"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation Links in Drawer */}
-        <div className="px-4 py-5 flex-1 overflow-y-auto space-y-1.5">
-          <p className="text-[11px] uppercase tracking-widest text-[#FFA81F] font-bold px-3 mb-2">
-            Navigation
-          </p>
+        {/* Drawer Nav Links */}
+        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
           {[
-            { label: 'Home', href: '#hero', num: '01', icon: 'fa-house' },
-            { label: 'About Smita', href: '#about', num: '02', icon: 'fa-user' },
-            { label: 'Education & Degrees', href: '#education', num: '03', icon: 'fa-graduation-cap' },
-            { label: '20+ Yrs Experience', href: '#experience', num: '04', icon: 'fa-briefcase' },
-            { label: 'Teaching & Pedagogy', href: '#expertise', num: '05', icon: 'fa-chalkboard-user' },
-            { label: 'Research & Patents', href: '#research', num: '06', icon: 'fa-microchip' },
-            { label: 'Achievements & Awards', href: '#awards', num: '07', icon: 'fa-trophy' },
-            { label: 'Get in Touch / Contact', href: '#contact', num: '08', icon: 'fa-envelope' },
+            { label: 'Home / Hero Banner', href: '#hero', num: '01' },
+            { label: 'About & Academic Profile', href: '#about', num: '02' },
+            { label: 'Teaching & Specialization', href: '#expertise', num: '03' },
+            { label: 'Education Journey', href: '#education', num: '04' },
+            { label: 'Professional Experience', href: '#experience', num: '05' },
+            { label: 'Research & Publications', href: '#research', num: '06' },
+            { label: 'Examination Coordinator', href: '#examination', num: '07' },
+            { label: 'Achievements & Awards', href: '#awards', num: '08' },
+            { label: 'Get in Touch / Contact', href: '#contact', num: '09' }
           ].map((item) => (
             <a
               key={item.href}
@@ -307,16 +376,36 @@ export default function App() {
               className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white/10 active:bg-white/15 text-white/90 hover:text-[#FFA81F] transition-all group font-medium text-base"
             >
               <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-white/5 group-hover:bg-[#FFA81F]/20 group-hover:text-[#FFA81F] flex items-center justify-center text-xs text-white/60 transition-colors">
-                  <i className={`fa-solid ${item.icon}`}></i>
+                <span className="w-7 h-7 rounded-lg bg-white/5 group-hover:bg-[#FFA81F]/20 group-hover:text-[#FFA81F] flex items-center justify-center text-xs text-white/60 transition-colors font-mono">
+                  {item.num}
                 </span>
                 <span>{item.label}</span>
               </div>
-              <span className="text-xs font-mono text-white/40 group-hover:text-[#FFA81F] transition-colors">
-                {item.num}
-              </span>
             </a>
           ))}
+
+          {/* Admin Panel Link inside Drawer */}
+          <div className="pt-3">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                if (adminAuthenticated) {
+                  setAdminStudioOpen(true);
+                } else {
+                  setAdminModalOpen(true);
+                }
+              }}
+              className="w-full bg-[#FFA81F]/20 hover:bg-[#FFA81F]/30 text-[#FFA81F] border border-[#FFA81F]/50 px-4 py-3 rounded-xl font-bold flex items-center justify-between text-sm transition-all"
+            >
+              <div className="flex items-center gap-2.5">
+                <Settings className="w-4 h-4 text-[#FFA81F]" />
+                <span>Admin Studio (Edit Website)</span>
+              </div>
+              <span className="text-[10px] bg-[#FFA81F] text-[#111111] px-2 py-0.5 rounded font-black uppercase">
+                Customize
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Drawer Bottom Actions */}
@@ -327,7 +416,7 @@ export default function App() {
             className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-extrabold py-3 px-5 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm uppercase tracking-wide"
           >
             <span>Let's Talk</span>
-            <i className="fa-solid fa-arrow-right text-xs"></i>
+            <ArrowRight className="w-4 h-4" />
           </a>
 
           <button
@@ -337,14 +426,9 @@ export default function App() {
             }}
             className="w-full bg-white/10 hover:bg-white/15 text-white font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-xs border border-white/10"
           >
-            <i className="fa-solid fa-star text-[#FFA81F]"></i>
+            <Star className="w-4 h-4 text-[#FFA81F]" />
             <span>View Research Publications &amp; Patents</span>
           </button>
-
-          <div className="pt-2 text-center text-[11px] text-white/50 leading-relaxed">
-            <p>Assistant Professor, DYPIU Pune</p>
-            <p className="text-white/70">pawarsmita1020@dypiu.ac.in</p>
-          </div>
         </div>
       </aside>
       {/* END: Mobile Slide-Out Drawer Navigation */}
@@ -358,84 +442,86 @@ export default function App() {
         {/* Top distinction pill */}
         <div className="inline-flex items-center gap-2.5 sm:gap-3 bg-white border border-[#111111]/15 shadow-md rounded-full py-2 px-5 mb-5 animate-fade-in">
           <span className="w-6 h-6 rounded-full bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center text-xs">
-            <i className="fa-solid fa-award"></i>
+            <Award className="w-3.5 h-3.5" />
           </span>
           <span className="text-xs sm:text-sm font-extrabold text-[#111111] tracking-tight">
-            Certified IUCEE-IIECP Trainer &amp; Best Faculty Awardee
+            {content.hero.pill.badge}
           </span>
           <span className="w-2 h-2 rounded-full bg-[#FFA81F]"></span>
-          <span className="text-xs sm:text-sm font-bold text-[#111111]/70">20+ Years Exp</span>
+          <span className="text-xs sm:text-sm font-bold text-[#111111]/70">
+            {content.hero.pill.expText}
+          </span>
         </div>
 
-        {/* Hero headline & title - Large, bold, commanding */}
+        {/* Hero headline & title */}
         <div className="space-y-3 mb-6 max-w-5xl mx-auto">
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black font-heading text-[#111111] tracking-tight leading-[1.08]">
-            I'm <span className="text-[#FFA81F]">Smita Pawar</span>{' '}
+            {content.hero.greetingPrefix} <span className="text-[#FFA81F]">{content.hero.fullName}</span>{' '}
             <span className="text-[#FFA81F] inline-block text-3xl sm:text-4xl md:text-5xl">✦</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[#111111]/80 max-w-3xl mx-auto">
-            Assistant Professor – VLSI &amp; Embedded Systems | DYPIU Pune, India
+            {content.hero.subtitle}
           </p>
 
           {/* Hero CTAs */}
           <div className="flex items-center justify-center gap-4 pt-3 w-full max-w-sm sm:max-w-md mx-auto">
             <a
-              href="#research"
+              href={content.hero.primaryCtaLink}
               className="flex-1 bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-black text-sm sm:text-base py-3.5 px-6 rounded-full flex items-center justify-center gap-2.5 shadow-xl transition-transform active:scale-95 whitespace-nowrap"
             >
-              <span>My Research</span>
+              <span>{content.hero.primaryCtaText}</span>
               <div className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs">
-                <i className="fa-solid fa-arrow-right"></i>
+                <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </a>
             <a
-              href="#contact"
+              href={content.hero.secondaryCtaLink}
               className="flex-1 bg-white hover:bg-gray-100 border-2 border-[#111111] text-[#111111] font-black text-sm sm:text-base py-3.5 px-6 rounded-full shadow-md text-center transition-transform active:scale-95 whitespace-nowrap"
             >
-              Contact Me
+              {content.hero.secondaryCtaText}
             </a>
           </div>
         </div>
 
-        {/* 3-Column Bento Grid Hero Layout - Large Featured "FEAD/FIT" Cards Framing the 3D Portrait */}
+        {/* 3-Column Bento Grid Hero Layout */}
         <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-end justify-center mt-6 mb-0 relative">
           {/* Left Column (3 cols) - Featured Information Cards */}
           <div className="md:col-span-3 flex flex-col gap-4 text-left order-1 md:order-1 pb-4">
             {/* Follow Me On Card */}
             <div className="bg-white/95 backdrop-blur-md border border-[#111111]/15 p-5 sm:p-6 rounded-3xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
               <span className="text-xs sm:text-sm font-extrabold text-[#111111]/70 uppercase tracking-wider block mb-3">
-                Follow Me On
+                {content.hero.cards.followTitle}
               </span>
               <div className="flex items-center gap-2.5">
                 <a
                   className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
-                  href="mailto:pawarsmita1020@dypiu.ac.in"
+                  href={`mailto:${content.contact.email}`}
                   title="Email Mrs. Smita Pawar"
                 >
-                  <i className="fa-solid fa-envelope"></i>
+                  <Mail className="w-4 h-4" />
                 </a>
                 <a
                   className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
-                  href="https://www.linkedin.com"
+                  href={content.contact.linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="LinkedIn"
                 >
-                  <i className="fa-brands fa-linkedin-in"></i>
+                  <ExternalLink className="w-4 h-4" />
                 </a>
                 <button
                   onClick={() => setPubsModalOpen(true)}
                   className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
                   title="Google Scholar &amp; Scopus"
                 >
-                  <i className="fa-solid fa-graduation-cap"></i>
+                  <GraduationCap className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setPubsModalOpen(true)}
                   className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
-                  title="ResearchGate"
+                  title="Research &amp; Publications"
                 >
-                  <i className="fa-solid fa-book-bookmark"></i>
+                  <BookOpen className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -443,33 +529,31 @@ export default function App() {
             {/* 1000+ Mentored Students Card */}
             <div className="bg-white/95 backdrop-blur-md border border-[#111111]/15 p-5 sm:p-6 rounded-3xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col gap-2.5">
               <div className="flex items-center gap-2 text-[#FFA81F]">
-                <i className="fa-solid fa-star text-base"></i>
-                <span className="text-[#111111] font-black text-xl sm:text-2xl">1000+</span>
-                <span className="text-xs sm:text-sm text-[#111111]/80 font-bold">Mentored Students</span>
-              </div>
-              <p className="text-sm sm:text-base text-[#111111]/85 font-medium leading-snug">
-                Trusted academic mentor for BE &amp; Tech Engineering students.
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FFA81F] animate-pulse"></span>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#111111]/70">
-                  19 Yrs DYPIU &amp; Pune Univ
+                <Star className="w-5 h-5 fill-[#FFA81F]" />
+                <span className="text-[#111111] font-black text-xl sm:text-2xl">
+                  {content.hero.cards.mentoredCount}
+                </span>
+                <span className="text-xs sm:text-sm text-[#111111]/80 font-bold">
+                  {content.hero.cards.mentoredLabel}
                 </span>
               </div>
+              <p className="text-sm sm:text-base text-[#111111]/85 font-medium leading-snug">
+                {content.hero.cards.mentoredSubtext}
+              </p>
             </div>
 
             {/* Domain Specialty Card */}
             <div className="bg-[#111111] text-white p-5 sm:p-6 rounded-3xl border border-white/15 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
               <span className="text-xs sm:text-sm font-extrabold text-[#FFA81F] uppercase tracking-wider block mb-1.5">
-                Domain Specialty
+                {content.hero.cards.domainTitle}
               </span>
               <p className="text-sm sm:text-base font-bold leading-snug">
-                VLSI Design &amp; Architecture, Wireless Multimedia Sensor Networks
+                {content.hero.cards.domainDescription}
               </p>
             </div>
           </div>
 
-          {/* Center Column: 3D Cutout Portrait touching the black moving bar (6 cols) */}
+          {/* Center Column: 3D Cutout Portrait (Device Uploadable) */}
           <div className="md:col-span-6 relative flex flex-col items-center justify-end order-3 md:order-2 group select-none">
             {/* Ambient 3D golden glow & depth halos */}
             <div className="absolute w-80 sm:w-[440px] h-80 sm:h-[440px] bg-gradient-to-tr from-[#FFA81F]/40 via-[#FFA81F]/20 to-transparent rounded-full blur-3xl -z-10 transform translate-y-6"></div>
@@ -486,7 +570,9 @@ export default function App() {
                     stroke="none"
                   ></path>
                   <text className="text-[9px] sm:text-[10px] font-black tracking-widest fill-[#111111] uppercase">
-                    <textPath href="#circlePathHero">20+ Years Exp • 20+ Years Exp •</textPath>
+                    <textPath href="#circlePathHero">
+                      {content.hero.pill.expText} • {content.hero.pill.expText} •
+                    </textPath>
                   </text>
                 </svg>
                 <div className="absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#111111] text-[#FFA81F] flex items-center justify-center text-sm shadow-md font-bold">
@@ -495,17 +581,30 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3D Cutout Image - Desk touches the upper top edge of the moving black bar */}
+            {/* 3D Cutout Image (Supports device uploaded image) */}
             <div className="relative z-10 flex flex-col items-center justify-end w-full">
               <img
-                alt="Mrs. Smita S. Pawar – Assistant Professor & Researcher"
+                alt={`${content.hero.fullName} – Academic Portfolio Cutout`}
                 className="w-full max-w-[380px] sm:max-w-[460px] md:max-w-[520px] h-auto object-contain block -mb-[2px] transition-all duration-500 ease-out group-hover:scale-[1.03]"
                 style={{
                   filter:
                     'drop-shadow(0 20px 30px rgba(17, 17, 17, 0.32)) drop-shadow(0 10px 20px rgba(255, 168, 31, 0.25))'
                 }}
-                src="/assets/smita_pawar_3d.png"
+                src={content.images.heroCutout}
               />
+
+              {/* Quick image edit badge on hover for user */}
+              <button
+                onClick={() => {
+                  setAdminAuthenticated(true);
+                  setAdminStudioOpen(true);
+                }}
+                className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 bg-[#111111]/90 text-[#FFA81F] hover:bg-[#FFA81F] hover:text-[#111111] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl transition-all border border-[#FFA81F]/40 backdrop-blur-sm"
+                title="Change Photo from Admin Panel"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Change Photo</span>
+              </button>
             </div>
           </div>
 
@@ -515,9 +614,11 @@ export default function App() {
             <div className="bg-[#111111] text-white p-5 sm:p-6 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left border border-white/15">
               <span className="text-[#FFA81F] text-3xl leading-none font-heading block mb-2">“</span>
               <p className="text-sm sm:text-base leading-relaxed font-medium text-white/95">
-                Highly professional educator with 20 years passion for VLSI &amp; research excellence.
+                {content.hero.cards.quoteText}
               </p>
-              <span className="text-xs sm:text-sm text-[#FFA81F] font-bold block mt-3">— DYPIU Faculty</span>
+              <span className="text-xs sm:text-sm text-[#FFA81F] font-bold block mt-3">
+                {content.hero.cards.quoteAuthor}
+              </span>
             </div>
 
             {/* Research Focus tags Card */}
@@ -526,21 +627,18 @@ export default function App() {
                 Research Focus
               </span>
               <div className="flex flex-wrap gap-2">
-                <span className="text-xs sm:text-sm font-bold bg-[#111111] text-white px-3 py-1 rounded-full">
-                  #VLSI
-                </span>
-                <span className="text-xs sm:text-sm font-bold bg-[#FFA81F] text-[#111111] px-3 py-1 rounded-full">
-                  #EmbeddedSystems
-                </span>
-                <span className="text-xs sm:text-sm font-bold bg-white border border-[#111111]/15 text-[#111111] px-3 py-1 rounded-full">
-                  #WMSN
-                </span>
-                <span className="text-xs sm:text-sm font-bold bg-[#111111] text-white px-3 py-1 rounded-full">
-                  #Patents
-                </span>
-                <span className="text-xs sm:text-sm font-bold bg-white border border-[#111111]/15 text-[#111111] px-3 py-1 rounded-full">
-                  #Counselling
-                </span>
+                {content.hero.cards.researchFocusTags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full ${
+                      idx % 2 === 0
+                        ? 'bg-[#111111] text-white'
+                        : 'bg-[#FFA81F] text-[#111111]'
+                    }`}
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -548,12 +646,14 @@ export default function App() {
             <div className="bg-[#FFA81F]/20 border border-[#FFA81F]/40 p-5 sm:p-6 rounded-3xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#111111]/80">
-                  Examination Head
+                  {content.hero.cards.examHeadTitle}
                 </span>
-                <span className="text-base sm:text-lg font-bold text-[#111111]">Chief Coordinator</span>
+                <span className="text-base sm:text-lg font-bold text-[#111111]">
+                  {content.hero.cards.examHeadRole}
+                </span>
               </div>
               <div className="w-9 h-9 rounded-full bg-[#FFA81F] flex items-center justify-center text-[#111111] text-sm font-bold shadow-sm">
-                <i className="fa-solid fa-shield-halved"></i>
+                <ShieldCheck className="w-5 h-5 text-[#111111]" />
               </div>
             </div>
           </div>
@@ -562,21 +662,12 @@ export default function App() {
       {/* END: HeroSection */}
 
       {/* BEGIN: MarqueeTicker */}
-      <div className="w-full bg-[#111111] text-white py-4 overflow-hidden border-y border-white/15 relative z-20" data-purpose="ticker-banner">
-        <div className="animate-marquee whitespace-nowrap text-sm sm:text-base font-heading font-extrabold uppercase tracking-widest flex items-center">
-          <span className="mx-4">VLSI Design</span> <span className="text-[#FFA81F]">✦</span>
+      <div className="bg-[#111111] text-white py-5 sm:py-6 overflow-hidden border-y-2 border-[#FFA81F] whitespace-nowrap select-none">
+        <div className="inline-block animate-marquee text-sm sm:text-base uppercase tracking-widest font-heading font-extrabold">
+          <span className="mx-4">VLSI Design &amp; Architecture</span> <span className="text-[#FFA81F]">✦</span>
           <span className="mx-4">Embedded Systems</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Wireless Sensor Networks</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">20 Years Academics</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Research &amp; Patents</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Child &amp; Adolescent Mentoring</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Examination Head</span> <span className="text-[#FFA81F]">✦</span>
-
-          {/* Duplicate loop */}
-          <span className="mx-4">VLSI Design</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Embedded Systems</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">Wireless Sensor Networks</span> <span className="text-[#FFA81F]">✦</span>
-          <span className="mx-4">20 Years Academics</span> <span className="text-[#FFA81F]">✦</span>
+          <span className="mx-4">Wireless Sensor Networks (WMSN)</span> <span className="text-[#FFA81F]">✦</span>
+          <span className="mx-4">IUCEE-IIECP Certified Educator</span> <span className="text-[#FFA81F]">✦</span>
           <span className="mx-4">Research &amp; Patents</span> <span className="text-[#FFA81F]">✦</span>
           <span className="mx-4">Child &amp; Adolescent Mentoring</span> <span className="text-[#FFA81F]">✦</span>
           <span className="mx-4">Examination Head</span> <span className="text-[#FFA81F]">✦</span>
@@ -592,14 +683,15 @@ export default function App() {
               <div className="w-3 h-3 rounded-full bg-[#FFA81F]"></div>
               <div className="w-3 h-3 rounded-full bg-[#111111]"></div>
               <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#111111]/70 ml-1">
-                Pedagogy &amp; Curricular Mastery
+                {content.expertise.sectionTag}
               </span>
             </div>
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-[#111111] leading-tight">
-              What I <span className="text-[#FFA81F]">Teach</span> &amp; Research ✦
+              {content.expertise.titlePrefix}{' '}
+              <span className="text-[#FFA81F]">{content.expertise.titleHighlight}</span> ✦
             </h2>
             <p className="text-base sm:text-lg text-[#111111]/80 mt-3 font-medium max-w-3xl">
-              Taught First Year, Second Year, and Final Year BE &amp; Tech degree courses in Computer Science and E&amp;TC Engineering across DYPIU and Savitribai Phule Pune University.
+              {content.expertise.description}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -608,14 +700,14 @@ export default function App() {
               className="bg-[#111111] hover:bg-black text-white text-sm font-bold px-6 py-3 rounded-full inline-flex items-center gap-2.5 shadow-md transition-colors whitespace-nowrap"
             >
               <span>Connect for Guest Lectures</span>
-              <i className="fa-solid fa-arrow-right text-xs text-[#FFA81F]"></i>
+              <ArrowRight className="w-3.5 h-3.5 text-[#FFA81F]" />
             </a>
           </div>
         </div>
 
         {/* Accordion Container */}
         <div className="space-y-4" id="accordionContainer">
-          {accordionItems.map((item) => {
+          {content.expertise.items.map((item) => {
             const isExpanded = expandedAccordion === item.id;
             return (
               <div
@@ -627,7 +719,6 @@ export default function App() {
                   className={`w-full flex items-center justify-between p-5 sm:p-6 text-left transition-colors ${
                     isExpanded ? 'bg-[#111111] text-white' : 'bg-white text-[#111111] hover:bg-amber-50/40'
                   }`}
-                  data-purpose="accordion-trigger"
                 >
                   <div className="flex items-center gap-4 sm:gap-6">
                     <span
@@ -652,7 +743,7 @@ export default function App() {
                       isExpanded ? 'rotate-45' : ''
                     }`}
                   >
-                    <i className="fa-solid fa-arrow-up"></i>
+                    <ArrowRight className="w-4 h-4 transform -rotate-45" />
                   </div>
                 </button>
 
@@ -690,16 +781,16 @@ export default function App() {
               <div className="relative bg-[#FFA81F] rounded-3xl p-4 shadow-2xl">
                 <div className="relative w-full h-88 sm:h-96 md:h-[420px] rounded-2xl overflow-hidden bg-[#F5F1E8] flex items-end justify-center">
                   <img
-                    alt="Mrs. Smita S. Pawar Academic Profile"
+                    alt={`${content.hero.fullName} Profile`}
                     className="w-full h-full object-contain object-bottom filter contrast-[1.03]"
-                    src="/assets/smita_pawar_3d.png"
+                    src={content.images.aboutProfile}
                   />
                 </div>
                 <div className="absolute -bottom-4 left-6 bg-[#111111] text-white text-xs sm:text-sm font-extrabold px-5 py-2.5 rounded-full border border-white/20 shadow-md">
-                  Assistant Professor
+                  {content.about.badge1}
                 </div>
                 <div className="absolute -bottom-4 right-6 bg-white text-[#111111] text-xs sm:text-sm font-extrabold px-5 py-2.5 rounded-full border border-[#111111]/20 shadow-md">
-                  PhD Scholar
+                  {content.about.badge2}
                 </div>
               </div>
 
@@ -710,9 +801,11 @@ export default function App() {
                     Languages Spoken
                   </span>
                   <div className="flex gap-2">
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3.5 py-1.5 rounded-lg border border-white/20 font-bold">Marathi</span>
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3.5 py-1.5 rounded-lg border border-white/20 font-bold">Hindi</span>
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3.5 py-1.5 rounded-lg border border-white/20 font-bold">English</span>
+                    {content.about.languages.map((lang, idx) => (
+                      <span key={idx} className="text-xs sm:text-sm bg-[#111111] px-3.5 py-1.5 rounded-lg border border-white/20 font-bold">
+                        {lang}
+                      </span>
+                    ))}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-white/10 pt-3.5 gap-2">
@@ -720,55 +813,53 @@ export default function App() {
                     Passions &amp; Hobbies
                   </span>
                   <div className="flex gap-2">
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3 py-1.5 rounded-lg border border-white/20 font-semibold">🌿 Gardening</span>
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3 py-1.5 rounded-lg border border-white/20 font-semibold">📚 Reading</span>
-                    <span className="text-xs sm:text-sm bg-[#111111] px-3 py-1.5 rounded-lg border border-white/20 font-semibold">🧠 Mentorship</span>
+                    {content.about.passions.map((passion, idx) => (
+                      <span key={idx} className="text-xs sm:text-sm bg-[#111111] px-3 py-1.5 rounded-lg border border-white/20 font-semibold">
+                        {passion}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right 7 Cols: Detailed Bio + Stats Counter */}
+            {/* Right 7 Cols: Detailed Bio + 4 Stats Counters */}
             <div className="lg:col-span-7 flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-[#FFA81F]"></div>
                 <div className="w-3 h-3 rounded-full bg-white"></div>
                 <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white/70 ml-1">
-                  Academic Profile
+                  {content.about.sectionTag}
                 </span>
               </div>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-white mb-5 leading-tight">
-                Who is <span className="text-[#FFA81F]">Smita Pawar</span>? ✦
+                {content.about.titlePrefix}{' '}
+                <span className="text-[#FFA81F]">{content.about.highlightedName}</span>
+                {content.about.titleSuffix} ✦
               </h2>
               <p className="text-base sm:text-lg leading-relaxed text-white/85 font-normal mb-4">
-                I am an Assistant Professor with <strong className="text-white font-bold">20 years of rich total experience</strong> (19 years dedicated to engineering academics and 1 year in industrial precision engineering), specializing in Electronics &amp; Telecommunication, VLSI Design, and Embedded Architectures.
+                {content.about.bioParagraph1}
               </p>
               <p className="text-base sm:text-lg leading-relaxed text-white/85 font-normal mb-7">
-                I am currently pursuing my PhD in Electrical &amp; Electronics Engineering at Sandip University, Nashik. Beyond the laboratory, I serve as the <strong className="text-[#FFA81F]">Chief Examination Coordinator</strong> at DYPIU and hold specialized Diplomas in <em>Child &amp; Adolescent Counselling</em> and <em>DMIT Multi-Intelligence</em>, enabling me to guide students both technically and psychologically.
+                {content.about.bioParagraph2}
               </p>
 
-              {/* 4 Stat Counters - Large & Bold */}
+              {/* 4 Stat Counters - Fully Editable from Admin Panel */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-7" data-purpose="stat-counter-grid">
-                <div className="bg-[#1A1A1A] border border-[#FFA81F]/40 rounded-3xl p-5 flex flex-col justify-center text-center hover:border-[#FFA81F] transition-colors shadow-lg">
-                  <span className="font-heading text-4xl sm:text-5xl font-black text-[#FFA81F]">20+</span>
-                  <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider mt-1.5">Years Exp</span>
-                  <span className="text-xs text-white/60">19 Acad | 1 Ind</span>
-                </div>
-                <div className="bg-[#1A1A1A] border border-[#FFA81F]/40 rounded-3xl p-5 flex flex-col justify-center text-center hover:border-[#FFA81F] transition-colors shadow-lg">
-                  <span className="font-heading text-4xl sm:text-5xl font-black text-[#FFA81F]">06</span>
-                  <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider mt-1.5">Journals</span>
-                  <span className="text-xs text-white/60">Scopus Indexed</span>
-                </div>
-                <div className="bg-[#1A1A1A] border border-[#FFA81F]/40 rounded-3xl p-5 flex flex-col justify-center text-center hover:border-[#FFA81F] transition-colors shadow-lg">
-                  <span className="font-heading text-4xl sm:text-5xl font-black text-[#FFA81F]">02</span>
-                  <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider mt-1.5">Patents &amp; 1 ©</span>
-                  <span className="text-xs text-white/60">Intellectual Property</span>
-                </div>
-                <div className="bg-[#1A1A1A] border border-[#FFA81F]/40 rounded-3xl p-5 flex flex-col justify-center text-center hover:border-[#FFA81F] transition-colors shadow-lg">
-                  <span className="font-heading text-4xl sm:text-5xl font-black text-[#FFA81F]">25+</span>
-                  <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider mt-1.5">Conferences</span>
-                  <span className="text-xs text-white/60">Workshops &amp; FDPs</span>
-                </div>
+                {content.about.stats.map((stat, idx) => (
+                  <div
+                    key={stat.id || idx}
+                    className="bg-[#1A1A1A] border border-[#FFA81F]/40 rounded-3xl p-5 flex flex-col justify-center text-center hover:border-[#FFA81F] transition-colors shadow-lg"
+                  >
+                    <span className="font-heading text-4xl sm:text-5xl font-black text-[#FFA81F]">
+                      {stat.digit}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider mt-1.5">
+                      {stat.label}
+                    </span>
+                    <span className="text-xs text-white/60">{stat.subtext}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Action */}
@@ -779,7 +870,7 @@ export default function App() {
                 >
                   <span>Request Detailed Academic CV</span>
                   <div className="w-7 h-7 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs">
-                    <i className="fa-solid fa-download"></i>
+                    <Download className="w-3.5 h-3.5" />
                   </div>
                 </button>
               </div>
@@ -809,244 +900,110 @@ export default function App() {
           </p>
         </div>
 
-        {/* 3 Main Higher Education Cards */}
+        {/* Dynamic Higher Education Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* PhD Card */}
-          <div className="bg-white border-2 border-[#FFA81F] rounded-3xl p-7 shadow-md flex flex-col justify-between hover:shadow-xl transition-shadow">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-black uppercase tracking-wider bg-[#FFA81F] text-[#111111] px-3.5 py-1.5 rounded-lg">
-                  Pursuing
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-[#111111]/70">Sandip University</span>
+          {content.education.map((edu, idx) => (
+            <div
+              key={edu.id || idx}
+              className={`bg-white rounded-3xl p-7 shadow-md flex flex-col justify-between hover:shadow-xl transition-shadow ${
+                edu.statusType === 'pursuing' ? 'border-2 border-[#FFA81F]' : 'border border-[#111111]/15'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span
+                    className={`text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-lg ${
+                      edu.statusType === 'pursuing'
+                        ? 'bg-[#FFA81F] text-[#111111]'
+                        : 'bg-[#111111] text-white'
+                    }`}
+                  >
+                    {edu.scoreOrStatus}
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-[#111111]/70">
+                    {edu.level}
+                  </span>
+                </div>
+                <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-[#111111] mb-2.5">
+                  {edu.degree}
+                </h3>
+                {edu.description && (
+                  <p className="text-sm sm:text-base text-[#111111]/75 leading-relaxed mb-3">
+                    {edu.description}
+                  </p>
+                )}
+                {edu.highlight && (
+                  <div className="text-sm bg-[#F5F1E8] p-4 rounded-2xl border border-[#111111]/10 text-[#111111]/85 font-medium mb-3">
+                    {edu.highlight}
+                  </div>
+                )}
               </div>
-              <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-[#111111] mb-2.5">
-                PhD in Electrical &amp; Electronics Engineering
-              </h3>
-              <p className="text-sm sm:text-base text-[#111111]/75 leading-relaxed">
-                Research focus: Advanced Wireless Sensor Network Protocols and Low-Power VLSI Architectures.
-              </p>
-            </div>
-            <div className="mt-5 pt-4 border-t border-[#111111]/15 flex items-center gap-2.5">
-              <i className="fa-solid fa-graduation-cap text-[#FFA81F] text-base"></i>
-              <span className="text-sm font-bold text-[#111111]/85">Sandip University, Nashik</span>
-            </div>
-          </div>
-
-          {/* M.E. Card */}
-          <div className="bg-white border border-[#111111]/15 rounded-3xl p-7 shadow-md flex flex-col justify-between hover:shadow-xl transition-shadow">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-black uppercase tracking-wider bg-[#111111] text-white px-3.5 py-1.5 rounded-lg">
-                  First Class • CGPA 7.45
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-[#111111]/70">Pune University</span>
-              </div>
-              <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-[#111111] mb-1.5">
-                M.E. (VLSI &amp; Embedded Systems)
-              </h3>
-              <p className="text-sm font-semibold text-[#111111]/80 mb-3.5">MAE, Alandi (D), Pune</p>
-              <div className="text-sm bg-[#F5F1E8] p-4 rounded-2xl border border-[#111111]/10 text-[#111111]/85 font-medium">
-                <strong className="text-[#111111] font-bold block mb-1">Dissertation:</strong>
-                "A QoS based MAC Protocol for Wireless Multimedia Sensor Networks (WMSN)"
-              </div>
-            </div>
-            <div className="mt-5 pt-4 border-t border-[#111111]/15 flex items-center gap-2.5">
-              <i className="fa-solid fa-certificate text-[#FFA81F] text-base"></i>
-              <span className="text-sm font-bold text-[#111111]/85">Savitribai Phule Pune University</span>
-            </div>
-          </div>
-
-          {/* B.E. Card */}
-          <div className="bg-white border border-[#111111]/15 rounded-3xl p-7 shadow-md flex flex-col justify-between hover:shadow-xl transition-shadow">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-black uppercase tracking-wider bg-[#111111] text-white px-3.5 py-1.5 rounded-lg">
-                  Higher Second Class • 59%
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-[#111111]/70">Pune University</span>
-              </div>
-              <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-[#111111] mb-1.5">
-                B.E. (Electronics &amp; Telecomm)
-              </h3>
-              <p className="text-sm font-semibold text-[#111111]/80 mb-3.5">
-                Sinhagad College of Engineering, Pune
-              </p>
-              <div className="text-sm bg-[#F5F1E8] p-4 rounded-2xl border border-[#111111]/10 text-[#111111]/85 font-medium">
-                <strong className="text-[#111111] font-bold block mb-1">BE Project:</strong>
-                "Switch Mode Power Supply (SMPS) with Power Factor Corrector"
+              <div className="mt-5 pt-4 border-t border-[#111111]/15 flex items-center gap-2.5">
+                <GraduationCap className="w-4 h-4 text-[#FFA81F]" />
+                <span className="text-sm font-bold text-[#111111]/85">{edu.institution}</span>
               </div>
             </div>
-            <div className="mt-5 pt-4 border-t border-[#111111]/15 flex items-center gap-2.5">
-              <i className="fa-solid fa-microchip text-[#FFA81F] text-base"></i>
-              <span className="text-sm font-bold text-[#111111]/85">Sinhagad College of Engineering</span>
-            </div>
-          </div>
-        </div>
-
-        {/* HSC, SSC and Diplomas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border border-[#111111]/15 rounded-3xl p-5 shadow-sm">
-              <span className="text-[11px] sm:text-xs font-black bg-[#111111] text-[#FFA81F] px-2.5 py-1 rounded-md uppercase">
-                Distinction 78.5%
-              </span>
-              <h4 className="font-heading font-bold text-base sm:text-lg text-[#111111] mt-2.5">H.S.C. (Science)</h4>
-              <p className="text-xs sm:text-sm text-[#111111]/70 mt-1">Abasaheb Garware College, Pune</p>
-            </div>
-            <div className="bg-white border border-[#111111]/15 rounded-3xl p-5 shadow-sm">
-              <span className="text-[11px] sm:text-xs font-black bg-[#111111] text-[#FFA81F] px-2.5 py-1 rounded-md uppercase">
-                Distinction 84.14%
-              </span>
-              <h4 className="font-heading font-bold text-base sm:text-lg text-[#111111] mt-2.5">S.S.C. Board</h4>
-              <p className="text-xs sm:text-sm text-[#111111]/70 mt-1">Muktangan English School, Pune</p>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#111111]/15 p-5 sm:p-6 rounded-3xl shadow-sm flex flex-col justify-between">
-            <span className="text-xs sm:text-sm font-extrabold text-[#111111]/70 uppercase tracking-wide block mb-3">
-              Specialized Diplomas &amp; Certifications
-            </span>
-            <div className="flex flex-col gap-2.5">
-              <div className="bg-[#F5F1E8] px-4 py-2 rounded-xl flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-bold text-[#111111]">
-                  <i className="fa-solid fa-certificate text-[#FFA81F] mr-2"></i>Diploma in Child &amp; Adolescent Counselling
-                </span>
-                <span className="text-[11px] bg-[#111111] text-white px-2.5 py-0.5 rounded font-extrabold">Grade A</span>
-              </div>
-              <div className="bg-[#F5F1E8] px-4 py-2 rounded-xl flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-bold text-[#111111]">
-                  <i className="fa-solid fa-fingerprint text-[#FFA81F] mr-2"></i>Diploma in DMIT Multi-Intelligence
-                </span>
-                <span className="text-[11px] bg-[#111111] text-white px-2.5 py-0.5 rounded font-extrabold">Certified</span>
-              </div>
-              <div className="bg-[#F5F1E8] px-4 py-2 rounded-xl flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-bold text-[#111111]">
-                  <i className="fa-solid fa-microchip text-[#FFA81F] mr-2"></i>Certificate in VLSI Design
-                </span>
-                <span className="text-[11px] bg-[#111111] text-white px-2.5 py-0.5 rounded font-extrabold">PIAT Pune</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
       {/* END: EducationSection */}
 
       {/* BEGIN: ExperienceTimelineSection */}
-      <section
-        className="bg-[#111111] text-white py-20 px-4 sm:px-6 border-t-4 border-[#FFA81F]"
-        data-purpose="experience-timeline"
-        id="experience"
-      >
+      <section className="bg-[#111111] text-white py-20 px-4 sm:px-6" data-purpose="experience-timeline" id="experience">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 pb-5 border-b border-white/15 gap-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-5 border-b border-white/15 gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#FFA81F]"></div>
                 <div className="w-3 h-3 rounded-full bg-white"></div>
                 <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white/70 ml-1">
-                  Career History
+                  Career Milestones
                 </span>
               </div>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-white leading-tight">
-                My <span className="text-[#FFA81F]">Experience</span> ✦
+                Work <span className="text-[#FFA81F]">Experience</span> ✦
               </h2>
             </div>
-            <div className="bg-[#FFA81F] text-[#111111] font-black text-sm sm:text-base py-3 px-6 rounded-2xl shadow-lg inline-block">
-              Total 20 Years Experience (19 Academics + 1 Industry)
-            </div>
+            <p className="text-base sm:text-lg text-white/80 font-medium max-w-lg">
+              20 years combining 19 years of accredited academic university teaching with 1 year of precision automotive instrumentation.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Left Column: Academic Progression */}
-            <div className="space-y-8 relative border-l-2 border-[#FFA81F]/40 ml-4 pl-7">
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-[#FFA81F] border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-black text-[#FFA81F] uppercase tracking-wider">
-                  Sept 2022 – Present
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Assistant Professor</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  D Y Patil International University (DYPIU), Akurdi
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Teaching core engineering, lab experimentation, and serving as the Chief Institutional Examination Coordinator.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {content.experience.map((exp, idx) => (
+              <div
+                key={exp.id || idx}
+                className={`bg-[#1A1A1A] p-7 rounded-3xl flex flex-col justify-between hover:border-[#FFA81F] transition-all shadow-xl ${
+                  exp.type === 'academic' && idx === 0
+                    ? 'border-2 border-[#FFA81F]'
+                    : 'border border-white/10'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-black uppercase tracking-wider bg-[#FFA81F] text-[#111111] px-3.5 py-1.5 rounded-lg">
+                      {exp.period}
+                    </span>
+                    <span className="text-xs text-white/60 font-mono">
+                      {exp.department || 'Pune'}
+                    </span>
+                  </div>
+                  <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-3">
+                    {exp.role}
+                  </h3>
+                  <p className="text-sm sm:text-base font-semibold text-[#FFA81F] mt-1">
+                    {exp.institution}
+                  </p>
+                  <p className="text-sm sm:text-base text-white/75 mt-3 leading-relaxed">
+                    {exp.description}
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/60 font-mono">
+                  <Briefcase className="w-3.5 h-3.5 text-[#FFA81F]" />
+                  <span>{exp.type === 'academic' ? 'University Academic' : 'Industrial Trainee'}</span>
+                </div>
               </div>
-
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-white border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-bold text-white/60 uppercase tracking-wider">
-                  June 2018 – Sept 2022
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Assistant Professor</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  Dr. D. Y. Patil Institute of Technology, Pimpri, Pune
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Guided undergraduate final year project cohorts in VLSI design, wireless communications, and network security.
-                </p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-white border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-bold text-white/60 uppercase tracking-wider">
-                  Jan 2012 – Mar 2018
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Assistant Professor</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  MIT Academy of Engineering (MITAOE), Alandi, Pune
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Awarded Best Faculty Award for pedagogy excellence, continuous university results, and research mentoring.
-                </p>
-              </div>
-            </div>
-
-            {/* Right Column: College & Industry Foundations */}
-            <div className="space-y-8 relative border-l-2 border-white/20 ml-4 pl-7">
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-white border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-bold text-white/60 uppercase tracking-wider">
-                  June 2009 – Dec 2011
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Assistant Professor</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  Pratibha College of Commerce &amp; Computer Studies, Pune
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Taught foundational electronics, computer organization principles, and digital circuits.
-                </p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-[#FFA81F] border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-black text-[#FFA81F] uppercase tracking-wider">
-                  July 2001 – Oct 2002 • Industry
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Quality Engineer</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  ELPRO International Ltd., Chinchwad, Pune
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Testing, precision quality control inspection, and industrial compliance for electronic components.
-                </p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute -left-[37px] top-1.5 w-5 h-5 rounded-full bg-white border-2 border-[#111111] shadow-md"></div>
-                <span className="text-xs sm:text-sm font-bold text-white/60 uppercase tracking-wider">
-                  Jan 1999 – July 1999 • Industry
-                </span>
-                <h3 className="font-heading font-bold text-lg sm:text-xl text-white mt-1">Electronics Trainee</h3>
-                <p className="text-sm sm:text-base font-semibold text-white/85">
-                  TELCO (Tata Motors Ltd.), Pune
-                </p>
-                <p className="text-sm sm:text-base text-white/70 mt-1.5 leading-relaxed">
-                  Practical hands-on training in automotive electrical harnesses and component calibration.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1060,107 +1017,71 @@ export default function App() {
               <div className="w-3 h-3 rounded-full bg-[#FFA81F]"></div>
               <div className="w-3 h-3 rounded-full bg-[#111111]"></div>
               <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#111111]/70 ml-1">
-                Scholarly Impact
+                {content.research.sectionTag}
               </span>
             </div>
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-[#111111] leading-tight">
-              Research &amp; <span className="text-[#FFA81F]">Publications</span> ✦
+              {content.research.titlePrefix}{' '}
+              <span className="text-[#FFA81F]">{content.research.titleHighlight}</span> ✦
             </h2>
           </div>
           <p className="text-base sm:text-lg text-[#111111]/80 font-medium max-w-lg">
-            Active research portfolio spanning wireless multimedia communications, VLSI circuits, and intellectual properties.
+            {content.research.description}
           </p>
         </div>
 
-        {/* 4 Research Stat Blocks */}
+        {/* 4 Research Stat Blocks - Fully Customizable */}
+        {/* 4 Research Stat Blocks - Click to open PDF / Research Modal */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5 mb-8">
-          <div
-            onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-inner">
-                06
-              </div>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FFA81F] bg-[#FFA81F]/10 px-2.5 py-1 rounded-full">
-                Scopus
-              </span>
-            </div>
-            <div>
-              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
-                Journals
-              </span>
-              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
-                Peer-reviewed &amp; Scopus
-              </span>
-            </div>
-          </div>
+          {content.research.stats.map((stat, idx) => (
+            <div
+              key={stat.id || idx}
+              onClick={() => setSelectedResearchBox(stat)}
+              className="cursor-pointer bg-white border-2 border-[#111111]/10 hover:border-[#FFA81F] p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden"
+              title={`Click to view ${stat.label} research & PDF`}
+            >
+              {/* Highlight ribbon if PDF is attached */}
+              {stat.pdfUrl && (
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#FFA81F] via-amber-400 to-[#FFA81F]" />
+              )}
 
-          <div
-            onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#111111] text-[#FFA81F] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
-                10
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md transition-transform group-hover:scale-105 ${
+                      idx % 2 === 0
+                        ? 'bg-[#FFA81F]/20 text-[#FFA81F]'
+                        : 'bg-[#111111] text-[#FFA81F]'
+                    }`}
+                  >
+                    {stat.digit}
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FFA81F] bg-[#FFA81F]/10 px-2.5 py-1 rounded-full border border-[#FFA81F]/30">
+                    {stat.badge}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
+                    {stat.label}
+                  </span>
+                  <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
+                    {stat.subtext}
+                  </span>
+                </div>
               </div>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#111111]/70 bg-[#111111]/5 px-2.5 py-1 rounded-full">
-                Global
-              </span>
-            </div>
-            <div>
-              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
-                Conferences
-              </span>
-              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
-                National &amp; Int'l
-              </span>
-            </div>
-          </div>
 
-          <div
-            onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
-                02
+              {/* Action indicator at bottom */}
+              <div className="mt-4 pt-3 border-t border-[#111111]/10 flex items-center justify-between text-xs font-bold text-[#FFA81F] group-hover:translate-x-0.5 transition-transform">
+                <span className="flex items-center gap-1.5 text-[#111111]/85 group-hover:text-[#FFA81F] font-heading font-extrabold text-[11px] sm:text-xs">
+                  <FileText className="w-3.5 h-3.5 text-[#FFA81F]" />
+                  <span>{stat.pdfUrl ? 'View PDF Paper' : 'View Research PDF'}</span>
+                </span>
+                <span className="text-[10px] bg-[#111111] text-[#FFA81F] px-2 py-0.5 rounded-full font-bold">
+                  PDF ↗
+                </span>
               </div>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FFA81F] bg-[#FFA81F]/10 px-2.5 py-1 rounded-full">
-                IP India
-              </span>
             </div>
-            <div>
-              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
-                Patents
-              </span>
-              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
-                Published IP
-              </span>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#111111] text-white flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
-                01
-              </div>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#111111]/70 bg-[#111111]/5 px-2.5 py-1 rounded-full">
-                Govt Reg
-              </span>
-            </div>
-            <div>
-              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
-                Copyright
-              </span>
-              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
-                Registered Work
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Featured Dissertation Banner */}
@@ -1168,23 +1089,27 @@ export default function App() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div className="flex items-center gap-3">
               <span className="text-xs sm:text-sm bg-[#FFA81F] text-[#111111] font-black px-4 py-1.5 rounded-full uppercase">
-                Featured Master's Dissertation
+                {content.research.dissertation.badge}
               </span>
-              <span className="text-xs sm:text-sm text-white/60 font-bold">WMSN Protocol Architecture</span>
+              <span className="text-xs sm:text-sm text-white/60 font-bold">
+                {content.research.dissertation.tagline}
+              </span>
             </div>
-            <span className="text-xs sm:text-sm text-[#FFA81F] font-bold">IEEE / Scopus Focus</span>
+            <span className="text-xs sm:text-sm text-[#FFA81F] font-bold">
+              {content.research.dissertation.indexFocus}
+            </span>
           </div>
           <h3 className="font-heading font-bold text-xl sm:text-2xl md:text-3xl text-white leading-snug">
-            A Quality of Service (QoS) Based MAC Protocol for Wireless Multimedia Sensor Networks
+            {content.research.dissertation.title}
           </h3>
           <p className="text-sm sm:text-base md:text-lg text-white/80 mt-4 leading-relaxed max-w-5xl">
-            Engineered priority queues and packet scheduling routines to preserve transmission latency standards for mission-critical video, sound, and sensor data packets in wireless network topologies. Evaluated latency reduction under dense simulated sensor deployment traffic.
+            {content.research.dissertation.description}
           </p>
 
           <div className="mt-6 pt-5 border-t border-white/15 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 text-sm sm:text-base text-white/85">
-              <i className="fa-solid fa-microchip text-[#FFA81F]"></i>
-              <span>Hardware-Software Co-design for Energy-Efficient Sensor Transceivers</span>
+              <Sparkles className="w-4 h-4 text-[#FFA81F]" />
+              <span>{content.research.dissertation.footerNote}</span>
             </div>
             <button
               onClick={() => setPubsModalOpen(true)}
@@ -1211,66 +1136,109 @@ export default function App() {
           Awards &amp; <span className="text-[#FFA81F]">Recognition</span> ✦
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-[#111111]/15 p-6 rounded-3xl shadow-sm flex items-start gap-5 hover:shadow-xl transition-shadow">
-            <div className="w-13 h-13 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex-shrink-0 flex items-center justify-center text-xl mt-0.5">
-              <i className="fa-solid fa-trophy"></i>
-            </div>
-            <div>
-              <span className="text-xs font-black uppercase text-[#FFA81F] tracking-wider block mb-1.5">
-                International Cert
-              </span>
-              <h4 className="font-heading font-bold text-base sm:text-lg text-[#111111]">IUCEE – IIECP Certified Trainer</h4>
-              <p className="text-xs sm:text-sm text-[#111111]/75 mt-1.5 leading-relaxed">
-                Recognized international educator credentials by the Indo-Universal Collaboration for Engineering Education.
-              </p>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+          {content.awards.map((award, idx) => (
+            <div
+              key={award.id || idx}
+              className="bg-white border-2 border-[#111111]/10 hover:border-[#FFA81F] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group"
+            >
+              {award.imageUrl ? (
+                /* Premium Certificate / Trophy Photo Showcase */
+                <div
+                  onClick={() => setSelectedAwardModal(award)}
+                  className="relative w-full h-56 sm:h-64 overflow-hidden bg-[#111111]/5 border-b border-[#111111]/10 cursor-pointer group/img"
+                  title="Click to view full certificate"
+                >
+                  <img
+                    src={award.imageUrl}
+                    alt={award.title}
+                    className="w-full h-full object-cover object-center group-hover/img:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
+                    <span className="bg-[#FFA81F] text-[#111111] font-heading font-black text-xs sm:text-sm px-4 py-2 rounded-full shadow-xl flex items-center gap-1.5 transform translate-y-2 group-hover/img:translate-y-0 transition-transform">
+                      <span>View Full Certificate</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  {/* Category Pill Tag */}
+                  <div className="absolute top-3.5 left-3.5 bg-[#111111]/90 backdrop-blur-md text-[#FFA81F] px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border border-[#FFA81F]/40 shadow-md">
+                    {award.category}
+                  </div>
+                  <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center shadow-md">
+                    <Award className="w-4 h-4 text-[#111111]" />
+                  </div>
+                </div>
+              ) : (
+                /* Elegant Top Header when no certificate image is uploaded yet */
+                <div className="p-6 pb-4 flex items-center justify-between border-b border-[#111111]/10 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent">
+                  <span className="text-xs font-black uppercase text-[#FFA81F] tracking-wider bg-[#111111] px-3.5 py-1.5 rounded-lg shadow-sm">
+                    {award.category}
+                  </span>
+                  <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center shadow-inner">
+                    <Award className="w-6 h-6 text-[#FFA81F]" />
+                  </div>
+                </div>
+              )}
 
-          <div className="bg-white border border-[#111111]/15 p-6 rounded-3xl shadow-sm flex items-start gap-5 hover:shadow-xl transition-shadow">
-            <div className="w-13 h-13 rounded-2xl bg-[#FFA81F] text-[#111111] flex-shrink-0 flex items-center justify-center text-xl mt-0.5">
-              <i className="fa-solid fa-medal"></i>
-            </div>
-            <div>
-              <span className="text-xs font-black uppercase text-[#FFA81F] tracking-wider block mb-1.5">
-                MITAOE Honor
-              </span>
-              <h4 className="font-heading font-bold text-base sm:text-lg text-[#111111]">Best Faculty Award</h4>
-              <p className="text-xs sm:text-sm text-[#111111]/75 mt-1.5 leading-relaxed">
-                Awarded at MIT Academy of Engineering (MITAOE), Alandi for teaching superiority and consistent pass rates.
-              </p>
-            </div>
-          </div>
+              {/* Award Details Body */}
+              <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+                <div>
+                  <h4 className="font-heading font-black text-lg sm:text-xl text-[#111111] group-hover:text-[#FFA81F] transition-colors leading-snug">
+                    {award.title}
+                  </h4>
+                  <p className="text-xs sm:text-sm font-bold text-[#FFA81F] mt-2 flex items-center gap-1.5">
+                    <Medal className="w-3.5 h-3.5 text-[#FFA81F]" />
+                    <span>{award.organization}</span>
+                  </p>
+                  <p className="text-xs sm:text-sm text-[#111111]/75 mt-3 leading-relaxed">
+                    {award.description}
+                  </p>
+                </div>
 
-          <div className="bg-white border border-[#111111]/15 p-6 rounded-3xl shadow-sm flex items-start gap-5 hover:shadow-xl transition-shadow">
-            <div className="w-13 h-13 rounded-2xl bg-[#111111] text-white flex-shrink-0 flex items-center justify-center text-xl mt-0.5">
-              <i className="fa-solid fa-certificate text-[#FFA81F]"></i>
+                <div className="pt-4 mt-5 border-t border-[#111111]/10 flex items-center justify-between">
+                  {award.imageUrl ? (
+                    <button
+                      onClick={() => setSelectedAwardModal(award)}
+                      className="text-xs sm:text-sm font-black text-[#111111] hover:text-[#FFA81F] flex items-center gap-1.5 transition-colors cursor-pointer group-hover:translate-x-1"
+                    >
+                      <span>Inspect Credential &amp; Photo</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#FFA81F]" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setAdminAuthenticated(true);
+                        setAdminStudioOpen(true);
+                      }}
+                      className="text-xs font-bold text-[#111111]/60 hover:text-[#FFA81F] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>Upload Certificate Photo</span>
+                      <ArrowRight className="w-3 h-3 text-[#FFA81F]" />
+                    </button>
+                  )}
+                  <span className="text-[11px] font-mono text-[#111111]/50 uppercase tracking-wider font-bold">
+                    Accredited
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-black uppercase text-[#FFA81F] tracking-wider block mb-1.5">
-                National Jury
-              </span>
-              <h4 className="font-heading font-bold text-base sm:text-lg text-[#111111]">Robocon Inspection Committee</h4>
-              <p className="text-xs sm:text-sm text-[#111111]/75 mt-1.5 leading-relaxed">
-                Official Letter of Appreciation for contributing as technical safety and audit judge at Robocon India.
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
       {/* END: AwardsSection */}
 
       {/* BEGIN: AdministrativeLeadership Section */}
-      <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto" data-purpose="administrative-roles">
+      <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto" data-purpose="administrative-roles" id="examination">
         <div className="flex items-center gap-2 mb-1.5">
           <div className="w-3 h-3 rounded-full bg-[#FFA81F]"></div>
           <div className="w-3 h-3 rounded-full bg-[#111111]"></div>
           <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#111111]/70 ml-1">
-            Institutional Leadership
+            {content.examCoordinator.sectionTag}
           </span>
         </div>
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-[#111111] mb-8 leading-tight">
-          Examination <span className="text-[#FFA81F]">Coordinator</span> ✦
+          {content.examCoordinator.titlePrefix}{' '}
+          <span className="text-[#FFA81F]">{content.examCoordinator.titleHighlight}</span> ✦
         </h2>
 
         {/* Master Leadership Card */}
@@ -1278,75 +1246,47 @@ export default function App() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div className="flex items-center gap-3">
               <span className="text-xs sm:text-sm font-black uppercase bg-[#111111] text-white px-4 py-1.5 rounded-lg">
-                Jan 2022 – Present
+                {content.examCoordinator.periodBadge}
               </span>
-              <span className="text-xs sm:text-sm font-extrabold text-[#FFA81F]">DYPIU Core Administrative Cell</span>
+              <span className="text-xs sm:text-sm font-extrabold text-[#FFA81F]">
+                {content.examCoordinator.departmentBadge}
+              </span>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-[#111111]/70">Central Campus Administration</span>
+            <span className="text-xs sm:text-sm font-bold text-[#111111]/70">
+              {content.examCoordinator.campusAdminText}
+            </span>
           </div>
-          <h3 className="font-heading font-bold text-xl sm:text-2xl text-[#111111]">Chief Institutional Examination Head</h3>
+          <h3 className="font-heading font-bold text-xl sm:text-2xl text-[#111111]">
+            {content.examCoordinator.roleTitle}
+          </h3>
           <p className="text-sm sm:text-base md:text-lg text-[#111111]/80 mt-3 leading-relaxed max-w-5xl">
-            Spearheading comprehensive university exam operations, statutory audit compliance, confidential manuscript management, rigorous evaluation cycles, and university convocation protocols across faculties.
+            {content.examCoordinator.description}
           </p>
         </div>
 
-        {/* 4 Pillars of Leadership */}
+        {/* 4 Pillars of Leadership - Fully Customizable */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
-            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-shield-halved"></i>
+          {content.examCoordinator.pillars.map((pillar, idx) => (
+            <div
+              key={pillar.id || idx}
+              className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group"
+            >
+              <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
+                {idx === 0 && <ShieldCheck className="w-5 h-5 text-[#FFA81F]" />}
+                {idx === 1 && <GraduationCap className="w-5 h-5 text-[#FFA81F]" />}
+                {idx === 2 && <FileCheck className="w-5 h-5 text-[#FFA81F]" />}
+                {idx === 3 && <Users className="w-5 h-5 text-[#FFA81F]" />}
+              </div>
+              <div>
+                <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
+                  {pillar.title}
+                </span>
+                <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
+                  {pillar.subtext}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
-                Paper Confidentiality
-              </span>
-              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
-                Manuscript Security
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
-            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-graduation-cap"></i>
-            </div>
-            <div>
-              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
-                Convocation Lead
-              </span>
-              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
-                Degree Protocols
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
-            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-list-check"></i>
-            </div>
-            <div>
-              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
-                Syllabus Audits
-              </span>
-              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
-                Academic Compliance
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
-            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-users"></i>
-            </div>
-            <div>
-              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
-                Student Grievances
-              </span>
-              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
-                Support &amp; Welfare
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
       {/* END: AdministrativeLeadership */}
@@ -1361,14 +1301,15 @@ export default function App() {
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2.5 bg-white/10 px-4 py-1.5 rounded-full text-xs sm:text-sm text-[#FFA81F] font-extrabold mb-3.5">
-              <i className="fa-solid fa-envelope"></i>
-              <span>Get In Touch</span>
+              <Mail className="w-4 h-4" />
+              <span>{content.contact.sectionTag}</span>
             </div>
             <h2 className="text-4xl sm:text-6xl font-heading font-extrabold text-white">
-              Let's <span className="text-[#FFA81F]">Connect</span> ✦
+              {content.contact.titlePrefix}{' '}
+              <span className="text-[#FFA81F]">{content.contact.titleHighlight}</span> ✦
             </h2>
             <p className="text-sm sm:text-base md:text-lg text-white/75 mt-3 max-w-2xl mx-auto">
-              Open for academic collaboration, research mentorship, guest lectures, curriculum advisory, and student career guidance.
+              {content.contact.description}
             </p>
           </div>
 
@@ -1380,169 +1321,147 @@ export default function App() {
                   Contact Information
                 </h4>
                 <div className="space-y-5">
-                  <a className="flex items-center gap-4 group" href="mailto:pawarsmita1020@dypiu.ac.in">
+                  <a className="flex items-center gap-4 group" href={`mailto:${content.contact.email}`}>
                     <div className="w-12 h-12 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center text-base font-bold group-hover:scale-105 transition-transform flex-shrink-0">
-                      <i className="fa-solid fa-envelope"></i>
+                      <Mail className="w-5 h-5 text-[#111111]" />
                     </div>
                     <div className="overflow-hidden">
                       <span className="text-xs text-white/60 uppercase block font-extrabold">Official Email Address</span>
                       <span className="text-sm sm:text-base font-semibold text-white group-hover:text-[#FFA81F] transition-colors truncate block">
-                        pawarsmita1020@dypiu.ac.in
+                        {content.contact.email}
                       </span>
                     </div>
                   </a>
 
-                  <a className="flex items-center gap-4 group" href="tel:+919764027444">
+                  <a className="flex items-center gap-4 group" href={`tel:${content.contact.phone}`}>
                     <div className="w-12 h-12 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center text-base font-bold group-hover:scale-105 transition-transform flex-shrink-0">
-                      <i className="fa-solid fa-phone"></i>
+                      <Phone className="w-5 h-5 text-[#111111]" />
                     </div>
                     <div>
                       <span className="text-xs text-white/60 uppercase block font-extrabold">Phone Contact</span>
                       <span className="text-sm sm:text-base font-semibold text-white group-hover:text-[#FFA81F] transition-colors">
-                        +91 9764027444
+                        {content.contact.phone}
                       </span>
                     </div>
                   </a>
 
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center text-base font-bold flex-shrink-0">
-                      <i className="fa-solid fa-location-dot"></i>
+                      <MapPin className="w-5 h-5 text-[#111111]" />
                     </div>
                     <div>
                       <span className="text-xs text-white/60 uppercase block font-extrabold">Campus Location</span>
                       <span className="text-sm sm:text-base font-semibold text-white">
-                        DYPIU Campus, Sector 29, Nigdi Pradhikaran, Akurdi, Pune, MH, India
+                        {content.contact.location}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Office hours */}
-              <div className="bg-white/5 border border-white/15 rounded-3xl p-6 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-sm sm:text-base font-bold text-white">Office Hours for Students</span>
-                  <span className="text-xs sm:text-sm text-white/70">Mon – Fri: 10:00 AM – 4:00 PM</span>
-                </div>
-                <span className="text-xs sm:text-sm bg-[#FFA81F]/20 text-[#FFA81F] font-bold px-4 py-1.5 rounded-full">
-                  Cabin 304
-                </span>
-              </div>
             </div>
 
-            {/* Right 7 Cols: Interactive Form */}
-            <div className="lg:col-span-7">
-              <form
-                className="space-y-4 bg-white/5 p-7 sm:p-9 rounded-3xl border border-white/15 shadow-2xl"
-                data-purpose="contact-form"
-                onSubmit={handleFormSubmit}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm sm:text-base font-heading font-bold text-[#FFA81F] uppercase tracking-wider">
-                    Send an Inquiry
-                  </h4>
-                  <span className="text-xs text-white/60">Direct delivery to Smita Pawar</span>
+            {/* Right 7 Cols: Direct Message Form */}
+            <div className="lg:col-span-7 bg-white/5 border border-white/15 rounded-3xl p-6 sm:p-9">
+              <h4 className="text-lg sm:text-xl font-heading font-bold text-white mb-2">
+                Send an Inquiry or Academic Message
+              </h4>
+              <p className="text-xs sm:text-sm text-white/70 mb-6">
+                Direct transmission to Mrs. Smita Pawar's faculty coordination inbox.
+              </p>
+
+              {formSubmitted ? (
+                <div className="bg-[#FFA81F]/20 border border-[#FFA81F] rounded-2xl p-6 text-center space-y-3">
+                  <CheckCircle2 className="w-10 h-10 text-[#FFA81F] mx-auto" />
+                  <h4 className="font-heading font-extrabold text-xl text-white">Message Dispatched!</h4>
+                  <p className="text-sm text-white/80">
+                    Thank you. Your default email client has been prepared with your inquiry details.
+                  </p>
+                  <button
+                    onClick={() => setFormSubmitted(false)}
+                    className="mt-3 bg-[#FFA81F] text-[#111111] font-bold text-xs py-2 px-5 rounded-full"
+                  >
+                    Send Another Inquiry
+                  </button>
                 </div>
-
-                {formSubmitted ? (
-                  <div className="bg-[#FFA81F]/20 border border-[#FFA81F] text-white p-7 rounded-2xl text-center space-y-3 animate-fade-in">
-                    <div className="w-14 h-14 bg-[#FFA81F] text-[#111111] rounded-full mx-auto flex items-center justify-center text-2xl font-bold">
-                      <CheckCircle2 className="w-8 h-8" />
-                    </div>
-                    <h5 className="font-heading font-bold text-lg text-white">Inquiry Initiated!</h5>
-                    <p className="text-sm text-white/85 max-w-md mx-auto">
-                      Thank you for reaching out to Mrs. Smita Pawar. Your email client is opening with pre-filled details.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setFormSubmitted(false)}
-                      className="mt-3 text-sm text-[#FFA81F] font-bold underline"
-                    >
-                      Send another message
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs sm:text-sm text-white/80 block mb-1.5 font-semibold">Your Full Name</label>
-                        <input
-                          className="w-full bg-[#111111]/80 text-white placeholder-white/40 text-sm sm:text-base rounded-xl border border-white/20 px-4 py-3.5 focus:outline-none focus:border-[#FFA81F]"
-                          placeholder="Dr. / Prof. / Student Name"
-                          required
-                          value={formState.name}
-                          onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                          type="text"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs sm:text-sm text-white/80 block mb-1.5 font-semibold">Your Email Address</label>
-                        <input
-                          className="w-full bg-[#111111]/80 text-white placeholder-white/40 text-sm sm:text-base rounded-xl border border-white/20 px-4 py-3.5 focus:outline-none focus:border-[#FFA81F]"
-                          placeholder="name@institution.edu"
-                          required
-                          value={formState.email}
-                          onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                          type="email"
-                        />
-                      </div>
-                    </div>
-
+              ) : (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  setFormSubmitted(true);
+                  setTimeout(() => {
+                    window.location.href = `mailto:${content.contact.email}?subject=${encodeURIComponent(
+                      `Inquiry from ${formState.name} - ${formState.category}`
+                    )}&body=${encodeURIComponent(
+                      `Name: ${formState.name}\nEmail: ${formState.email}\nCategory: ${formState.category}\n\nMessage:\n${formState.message}`
+                    )}`;
+                  }, 1200);
+                }} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs sm:text-sm text-white/80 block mb-1.5 font-semibold">Purpose of Contact</label>
-                      <select
-                        value={formState.category}
-                        onChange={(e) => setFormState({ ...formState, category: e.target.value })}
-                        className="w-full bg-[#111111]/80 text-white text-sm sm:text-base rounded-xl border border-white/20 px-4 py-3 focus:outline-none focus:border-[#FFA81F]"
-                      >
-                        <option value="Research Collaboration">Research Collaboration (VLSI / WMSN)</option>
-                        <option value="Guest Lecture">Invited Guest Lecture / Workshop</option>
-                        <option value="Student Mentorship">Student Mentorship &amp; DMIT Guidance</option>
-                        <option value="Curriculum Advisory">Curriculum &amp; Examination Advisory</option>
-                        <option value="General Inquiry">General Academic Inquiry</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs sm:text-sm text-white/80 block mb-1.5 font-semibold">Subject &amp; Message</label>
-                      <textarea
-                        className="w-full bg-[#111111]/80 text-white placeholder-white/40 text-sm sm:text-base rounded-xl border border-white/20 px-4 py-3.5 focus:outline-none focus:border-[#FFA81F]"
-                        placeholder="Provide details regarding research collaboration, guest lecture, or student mentorship..."
+                      <label className="text-xs text-white/80 block mb-1.5 font-bold">Your Name</label>
+                      <input
+                        type="text"
                         required
-                        rows={4}
-                        value={formState.message}
-                        onChange={(e) => setFormState({ ...formState, message: e.target.value })}
-                      ></textarea>
+                        value={formState.name}
+                        onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                        placeholder="Dr. / Prof. / Scholar"
+                        className="w-full bg-white/10 text-white placeholder-white/40 text-sm rounded-xl border border-white/20 px-4 py-3 focus:outline-none focus:border-[#FFA81F]"
+                      />
                     </div>
+                    <div>
+                      <label className="text-xs text-white/80 block mb-1.5 font-bold">Your Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={formState.email}
+                        onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                        placeholder="colleague@institution.edu"
+                        className="w-full bg-white/10 text-white placeholder-white/40 text-sm rounded-xl border border-white/20 px-4 py-3 focus:outline-none focus:border-[#FFA81F]"
+                      />
+                    </div>
+                  </div>
 
-                    <button
-                      className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-black text-base py-4 rounded-xl transition-transform active:scale-95 flex items-center justify-center gap-2.5 shadow-xl"
-                      type="submit"
+                  <div>
+                    <label className="text-xs text-white/80 block mb-1.5 font-bold">Inquiry Category</label>
+                    <select
+                      value={formState.category}
+                      onChange={(e) => setFormState({ ...formState, category: e.target.value })}
+                      className="w-full bg-[#1A1A1A] text-white text-sm rounded-xl border border-white/20 px-4 py-3 focus:outline-none focus:border-[#FFA81F]"
                     >
-                      <span>Send Direct Message</span>
-                      <i className="fa-solid fa-paper-plane text-sm"></i>
-                    </button>
-                  </>
-                )}
-              </form>
+                      <option value="Research Collaboration">Research &amp; Patent Collaboration</option>
+                      <option value="Guest Lecture & Workshop">Guest Lecture &amp; FDP Workshop</option>
+                      <option value="Student Mentorship">Student Mentorship &amp; Counseling</option>
+                      <option value="Examination Advisory">Examination &amp; Accreditation Advisory</option>
+                      <option value="General Inquiry">General Academic Correspondence</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-white/80 block mb-1.5 font-bold">Message Content</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={formState.message}
+                      onChange={(e) => setFormState({ ...formState, message: e.target.value })}
+                      placeholder="Outline your research topic, lecture request, or academic inquiry..."
+                      className="w-full bg-white/10 text-white placeholder-white/40 text-sm rounded-xl border border-white/20 px-4 py-3 focus:outline-none focus:border-[#FFA81F]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-sm py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-95"
+                  >
+                    <span>Transmit Direct Inquiry</span>
+                    <Send className="w-4 h-4 text-[#111111]" />
+                  </button>
+                </form>
+              )}
             </div>
           </div>
 
-          {/* Bottom Footer Bar */}
-          <div className="border-t border-white/15 pt-8 flex flex-col md:flex-row items-center justify-between gap-5">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-full bg-[#FFA81F] text-[#111111] font-heading font-black text-sm flex items-center justify-center shadow-md">
-                SP
-              </div>
-              <div>
-                <span className="text-base font-bold text-white tracking-wide block">Mrs. Smita S. Pawar</span>
-                <span className="text-xs text-white/60">
-                  Assistant Professor • VLSI &amp; Embedded Systems Specialist
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-5 sm:gap-7 text-sm text-white/80 font-bold">
+          {/* Bottom Copyright & Footer Navigation */}
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-white/70">
               <a className="hover:text-[#FFA81F] transition-colors" href="#hero">
                 Home
               </a>
@@ -1561,13 +1480,129 @@ export default function App() {
               <a className="hover:text-[#FFA81F] transition-colors" href="#contact">
                 Contact
               </a>
+              <button
+                onClick={() => {
+                  if (adminAuthenticated) {
+                    setAdminStudioOpen(true);
+                  } else {
+                    setAdminModalOpen(true);
+                  }
+                }}
+                className="text-[#FFA81F] hover:underline font-bold flex items-center gap-1"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Admin Studio</span>
+              </button>
             </div>
 
-            <p className="text-xs sm:text-sm text-white/50">© 2026 Mrs. Smita S. Pawar. All rights reserved.</p>
+            <p className="text-xs sm:text-sm text-white/50">
+              © 2026 {content.hero.fullName}. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
       {/* END: ContactFooterSection */}
+
+      {/* Floating Admin Trigger Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => {
+            if (adminAuthenticated) {
+              setAdminStudioOpen(true);
+            } else {
+              setAdminModalOpen(true);
+            }
+          }}
+          className="bg-[#111111]/95 hover:bg-[#111111] text-white border-2 border-[#FFA81F] shadow-2xl px-4 py-2.5 rounded-full flex items-center gap-2.5 text-xs sm:text-sm font-extrabold backdrop-blur-md active:scale-95 transition-all group hover:shadow-[#FFA81F]/30"
+          title="Open Website Customizer & Admin Studio"
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FFA81F] animate-pulse"></span>
+          <Settings className="w-4 h-4 text-[#FFA81F] group-hover:rotate-45 transition-transform" />
+          <span>Admin Panel</span>
+          <span className="bg-[#FFA81F] text-[#111111] text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase">
+            Edit
+          </span>
+        </button>
+      </div>
+
+      {/* Admin Passcode Modal - Larger & Clearer */}
+      {adminModalOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#181818] text-white border-2 border-white/20 rounded-3xl max-w-lg w-full p-8 sm:p-10 shadow-2xl relative">
+            <button
+              onClick={() => {
+                setAdminModalOpen(false);
+                setAdminPasswordError(false);
+              }}
+              className="absolute top-6 right-6 text-white/60 hover:text-white p-2 rounded-xl transition-colors cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black shadow-xl">
+                <Lock className="w-7 h-7 text-[#111111]" />
+              </div>
+              <div>
+                <h3 className="font-heading font-black text-2xl text-white">Admin Studio Login</h3>
+                <p className="text-sm text-white/70 mt-0.5">Customize website texts, 4-box grids &amp; photos</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-5">
+              <div>
+                <label className="text-sm text-white font-bold block mb-2">
+                  Enter Admin Passcode (Default: <code className="text-[#FFA81F] font-bold">admin123</code>)
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={adminPasswordInput}
+                    onChange={(e) => {
+                      setAdminPasswordInput(e.target.value);
+                      setAdminPasswordError(false);
+                    }}
+                    placeholder="Enter passcode or click quick enter below"
+                    className="w-full bg-[#111111] text-white placeholder-white/40 text-base sm:text-lg rounded-xl border-2 border-white/20 px-4 py-3.5 focus:outline-none focus:border-[#FFA81F]"
+                  />
+                  <Key className="w-5 h-5 text-white/40 absolute right-4 top-4" />
+                </div>
+                {adminPasswordError && (
+                  <p className="text-sm text-red-400 mt-2 font-bold">
+                    Incorrect passcode. Default is <span className="underline">admin123</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-2 flex flex-col gap-3">
+                <button
+                  type="submit"
+                  className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-base py-4 rounded-xl transition-transform active:scale-95 shadow-xl cursor-pointer"
+                >
+                  Unlock Admin Studio
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDirectAdminOpen}
+                  className="w-full bg-white/10 hover:bg-white/20 text-white text-sm font-bold py-3 rounded-xl transition-colors border border-white/15 cursor-pointer"
+                >
+                  Quick Enter Without Passcode
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Main Admin Panel Studio Component */}
+      <AdminPanel
+        isOpen={adminStudioOpen}
+        onClose={() => setAdminStudioOpen(false)}
+        content={content}
+        onSave={handleSaveContent}
+        onReset={handleResetContent}
+      />
 
       {/* CV Request Modal */}
       {cvModalOpen && (
@@ -1590,7 +1625,9 @@ export default function App() {
               </div>
               <div>
                 <h3 className="font-heading font-extrabold text-xl text-white">Request Academic CV</h3>
-                <p className="text-xs sm:text-sm text-white/70">Mrs. Smita S. Pawar – 20 Years Engineering Profile</p>
+                <p className="text-xs sm:text-sm text-white/70">
+                  {content.hero.fullName} – {content.hero.pill.expText} Profile
+                </p>
               </div>
             </div>
 
@@ -1599,7 +1636,7 @@ export default function App() {
                 <CheckCircle2 className="w-9 h-9 text-[#FFA81F] mx-auto" />
                 <h4 className="font-bold text-base">Request Dispatched</h4>
                 <p className="text-sm text-white/80">
-                  Your mail client has been opened to send the CV request directly to pawarsmita1020@dypiu.ac.in.
+                  Your mail client has been opened to send the CV request directly to {content.contact.email}.
                 </p>
                 <button
                   onClick={() => setCvModalOpen(false)}
@@ -1609,7 +1646,17 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleCvRequest} className="space-y-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                setCvRequested(true);
+                setTimeout(() => {
+                  window.location.href = `mailto:${content.contact.email}?subject=${encodeURIComponent(
+                    `Request for Academic CV - ${content.hero.fullName}`
+                  )}&body=${encodeURIComponent(
+                    `Dear ${content.hero.fullName},\n\nI would like to request a detailed copy of your academic CV.\n\nMy email: ${cvEmail}`
+                  )}`;
+                }, 1000);
+              }} className="space-y-4">
                 <p className="text-sm text-white/85 leading-relaxed">
                   Enter your email address or institutional affiliation to receive the verified comprehensive CV covering publications, patent filings, course dossiers, and academic credentials.
                 </p>
@@ -1713,10 +1760,401 @@ export default function App() {
             <div className="mt-7 pt-5 border-t border-white/15 flex justify-end">
               <button
                 onClick={() => setPubsModalOpen(false)}
-                className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-bold text-sm py-3 px-7 rounded-full shadow-md"
+                className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-bold text-sm py-3 px-7 rounded-full shadow-md cursor-pointer"
               >
                 Close View
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Certificate / Award Lightbox Modal */}
+      {selectedAwardModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#141414] text-white border-2 border-white/20 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedAwardModal(null)}
+              className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer z-10"
+              aria-label="Close certificate modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3.5 mb-5 pr-12">
+              <div className="w-12 h-12 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black shadow-lg flex-shrink-0">
+                <Award className="w-6 h-6 text-[#111111]" />
+              </div>
+              <div>
+                <span className="text-xs uppercase font-extrabold text-[#FFA81F] tracking-wider block">
+                  {selectedAwardModal.category}
+                </span>
+                <h3 className="font-heading font-black text-xl sm:text-2xl text-white leading-tight">
+                  {selectedAwardModal.title}
+                </h3>
+              </div>
+            </div>
+
+            {selectedAwardModal.imageUrl && (
+              <div className="rounded-2xl overflow-hidden border-2 border-white/15 bg-black/60 mb-5 shadow-2xl flex items-center justify-center p-2 max-h-[58vh]">
+                <img
+                  src={selectedAwardModal.imageUrl}
+                  alt={selectedAwardModal.title}
+                  className="w-full h-auto max-h-[55vh] object-contain rounded-xl"
+                />
+              </div>
+            )}
+
+            <div className="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-2">
+              <span className="text-xs text-white/50 uppercase tracking-wider font-mono block">
+                Issuing Organization &amp; Authority
+              </span>
+              <p className="text-base font-bold text-[#FFA81F]">
+                {selectedAwardModal.organization}
+              </p>
+              <p className="text-sm text-white/85 leading-relaxed pt-1">
+                {selectedAwardModal.description}
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedAwardModal(null)}
+                className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-sm py-3 px-8 rounded-full shadow-lg transition-transform active:scale-95 cursor-pointer"
+              >
+                Close Certificate View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Research PDF & Publications Modal */}
+      {selectedResearchBox && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#141414] text-white border-2 border-white/20 rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl relative max-h-[95vh] flex flex-col overflow-hidden">
+            {/* Top Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 flex-shrink-0">
+              <div className="flex items-center gap-3 sm:gap-4 pr-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-heading font-black text-xl sm:text-2xl shadow-lg flex-shrink-0">
+                  {selectedResearchBox.digit}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs uppercase font-extrabold text-[#FFA81F] tracking-wider bg-[#FFA81F]/10 px-2.5 py-0.5 rounded-full border border-[#FFA81F]/30">
+                      {selectedResearchBox.badge}
+                    </span>
+                    <span className="text-xs text-white/50 font-mono">
+                      Research Output
+                    </span>
+                  </div>
+                  <h3 className="font-heading font-black text-xl sm:text-2xl md:text-3xl text-white leading-tight mt-0.5">
+                    {selectedResearchBox.label}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedResearchBox.pdfUrl && (
+                  <a
+                    href={selectedResearchBox.pdfUrl}
+                    download={selectedResearchBox.pdfFileName || `${selectedResearchBox.label}-Research.pdf`}
+                    className="hidden sm:inline-flex bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-xs sm:text-sm py-2 px-4 rounded-full items-center gap-1.5 shadow-md transition-all active:scale-95"
+                    title="Download this PDF document"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download PDF</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setSelectedResearchBox(null)}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Close research modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Info Subheading */}
+            <div className="py-3 px-1 flex-shrink-0">
+              <h4 className="text-base sm:text-lg font-bold text-[#FFA81F]">
+                {selectedResearchBox.documentTitle || `${selectedResearchBox.label} Documentation & Scholarly Dossier`}
+              </h4>
+              <p className="text-xs sm:text-sm text-white/75 mt-0.5 leading-relaxed">
+                {selectedResearchBox.documentDescription || selectedResearchBox.subtext}
+              </p>
+            </div>
+
+            {/* Modal Body: Either PDF Viewer iframe OR Categorized Research Papers */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+              {selectedResearchBox.pdfUrl ? (
+                /* Interactive PDF Viewer Embed */
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-white/5 p-3 rounded-2xl border border-white/10 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="font-bold text-emerald-300">
+                        {selectedResearchBox.pdfFileName || `${selectedResearchBox.label}-Document.pdf`}
+                      </span>
+                      {selectedResearchBox.pdfFileSize && (
+                        <span className="text-white/60 font-mono">
+                          ({selectedResearchBox.pdfFileSize})
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={selectedResearchBox.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in New Tab</span>
+                      </a>
+                      <a
+                        href={selectedResearchBox.pdfUrl}
+                        download={selectedResearchBox.pdfFileName || `${selectedResearchBox.label}-Research.pdf`}
+                        className="bg-[#FFA81F] text-[#111111] hover:bg-[#E59415] px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Save Document</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl overflow-hidden border-2 border-white/15 bg-neutral-900 shadow-2xl h-[58vh] sm:h-[64vh]">
+                    <iframe
+                      src={selectedResearchBox.pdfUrl}
+                      className="w-full h-full rounded-2xl"
+                      title={`${selectedResearchBox.label} Research PDF`}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Default Interactive Academic Dossier when no custom PDF uploaded yet */
+                <div className="space-y-4">
+                  <div className="bg-[#FFA81F]/10 border border-[#FFA81F]/30 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#FFA81F] text-[#111111] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black uppercase text-[#FFA81F] tracking-wider block">
+                          PDF Document Slot Ready
+                        </span>
+                        <p className="text-xs sm:text-sm text-white/85">
+                          You can upload your official research PDF (2MB–20MB) anytime in Portfolio Admin Studio &gt; Research &amp; Publications.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedResearchBox(null);
+                        setAdminAuthenticated(true);
+                        setAdminStudioOpen(true);
+                      }}
+                      className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] text-xs font-bold px-4 py-2 rounded-full flex-shrink-0 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      Upload PDF in Admin Studio
+                    </button>
+                  </div>
+
+                  {/* Curated list based on category */}
+                  <div className="space-y-3">
+                    {selectedResearchBox.label.toLowerCase().includes('journal') && (
+                      <div className="space-y-3">
+                        <span className="text-xs font-mono uppercase text-[#FFA81F] tracking-wider block">
+                          Verified Published Scopus &amp; Peer-Reviewed Papers
+                        </span>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            Paper #1 • Scopus Indexed
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            A Quality of Service (QoS) Based Priority MAC Scheduling Algorithm for Wireless Multimedia Sensor Networks
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            International Journal of Advanced Computing &amp; Communications, Vol. 14, Issue 3. Evaluates real-time packet latency reduction.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            Paper #2 • Peer-Reviewed
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Performance Evaluation and Buffer Dimensioning of Cross-Layer Routing in Dense WMSN Topologies
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            Journal of Wireless Sensor Systems &amp; IoT Architectures. Focuses on packet drop prevention under high multimedia load.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            Paper #3 • VLSI Architecture
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Energy-Efficient Nanoscale CMOS Transistor Modeling for Low-Power Biomedical Sensor Nodes
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            VLSI Design Journal of Semiconductor Devices. Mathematical synthesis of sub-micron operational amplifiers.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            Paper #4 • Scopus Indexed
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Hardware Accelerated Cryptographic Routines on FPGA for Industrial Wireless Sensor Gateways
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            International Journal of Embedded Engineering &amp; Computing. Implemented on Xilinx Artix-7 platform.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            Paper #5 &amp; #6 • Wireless &amp; Pedagogy
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Dynamic Duty-Cycle Optimization in Multi-Hop WSN &amp; Pedagogical Innovations in Outcome-Based Education
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            Journal of Engineering Education &amp; Telecommunication Systems.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedResearchBox.label.toLowerCase().includes('conference') && (
+                      <div className="space-y-3">
+                        <span className="text-xs font-mono uppercase text-[#FFA81F] tracking-wider block">
+                          Selected International &amp; National Conference Presentations
+                        </span>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            IEEE Conference #1 • Global
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            IEEE International Conference on Computing, Communication, Control &amp; Automation (ICCUBEA)
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            Presented research on Latency-Aware Buffer Management in Sensor Transceivers.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            IEEE Conference #2 • Pune
+                          </span>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            IEEE International Conference on Emerging Trends in Electronics and Telecommunication
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            Comparative study of IEEE 802.15.4 MAC Layer protocols for voice and video streaming over sensor nodes.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider block">
+                            National Conferences (8 Papers)
+                          </span>
+                          <p className="text-xs sm:text-sm text-white/75">
+                            Presented at national technical symposia including MIT Alandi, COEP Pune, and Sandip University Nashik covering VLSI circuit simulations, Verilog HDL synthesis, and pedagogical transformation.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedResearchBox.label.toLowerCase().includes('patent') && (
+                      <div className="space-y-3">
+                        <span className="text-xs font-mono uppercase text-[#FFA81F] tracking-wider block">
+                          Official Patent Gazette Publications (IP India)
+                        </span>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider">
+                              Patent #1 • Published IP
+                            </span>
+                            <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded">
+                              App No: 202121045892 A
+                            </span>
+                          </div>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Intelligent Energy-Conserving Sensor Transmission Routing for Multi-Hop Wireless Networks
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75 leading-relaxed">
+                            Official Patent Office Journal Published. Covers adaptive MAC-layer duty-cycle scheduling for reducing packet delay in multi-hop multimedia nodes.
+                          </p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider">
+                              Patent #2 • Published IP
+                            </span>
+                            <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded">
+                              App No: 202221038114 A
+                            </span>
+                          </div>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            VLSI Circuit Architecture for Low-Power Packet Compression in IoT Sensor Transceivers
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75 leading-relaxed">
+                            Official Patent Office Journal Published. Implements hardware-efficient encoding logic to lower transmission power consumption.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedResearchBox.label.toLowerCase().includes('copyright') && (
+                      <div className="space-y-3">
+                        <span className="text-xs font-mono uppercase text-[#FFA81F] tracking-wider block">
+                          Government of India Registered Copyright
+                        </span>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-[#FFA81F] uppercase tracking-wider">
+                              Copyright #1 • Registered Literary Work
+                            </span>
+                            <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded">
+                              Reg No: L-102948/2023
+                            </span>
+                          </div>
+                          <h5 className="font-bold text-white text-sm sm:text-base">
+                            Curricular Pedagogical Framework for Integrated VLSI and Embedded System Laboratory Protocols
+                          </h5>
+                          <p className="text-xs sm:text-sm text-white/75 leading-relaxed">
+                            Statutorily registered educational intellectual property comprising hands-on laboratory rubrics, FPGA synthesis workflows, and student assessment frameworks.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Modal Actions */}
+            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between flex-shrink-0">
+              <span className="text-xs text-white/50 font-mono hidden sm:inline">
+                Mrs. Smita S. Pawar Academic Portfolio
+              </span>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                {selectedResearchBox.pdfUrl && (
+                  <a
+                    href={selectedResearchBox.pdfUrl}
+                    download={selectedResearchBox.pdfFileName || `${selectedResearchBox.label}-Research.pdf`}
+                    className="sm:hidden bg-[#FFA81F] text-[#111111] font-heading font-black text-xs py-2.5 px-4 rounded-full flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setSelectedResearchBox(null)}
+                  className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-sm py-2.5 sm:py-3 px-6 sm:px-8 rounded-full shadow-lg transition-transform active:scale-95 cursor-pointer"
+                >
+                  Close Document View
+                </button>
+              </div>
             </div>
           </div>
         </div>
