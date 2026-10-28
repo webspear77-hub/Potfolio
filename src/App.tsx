@@ -149,24 +149,24 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F1E8] text-[#111111] font-sans antialiased selection:bg-[#FFA81F] selection:text-[#111111] text-base leading-relaxed">
       {/* BEGIN: MainHeader Floating Navbar */}
-      <header className="fixed top-4 inset-x-0 z-50 px-4 sm:px-6 max-w-6xl mx-auto" data-purpose="floating-navbar">
-        <nav className="bg-[#111111]/95 text-white rounded-full px-5 py-3 sm:px-7 sm:py-3.5 flex items-center justify-between shadow-2xl border border-white/10 backdrop-blur-xl">
+      <header className="fixed top-3 sm:top-4 inset-x-0 z-50 px-3 sm:px-6 max-w-6xl mx-auto" data-purpose="floating-navbar">
+        <nav className="bg-[#111111]/95 text-white rounded-full px-4 py-2.5 sm:px-7 sm:py-3.5 flex items-center justify-between shadow-2xl border border-white/10 backdrop-blur-xl">
           {/* Logo / Brand */}
-          <a href="#hero" className="flex items-center gap-3.5 group">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F] flex items-center justify-center font-heading font-black text-[#111111] text-sm transition-transform group-hover:scale-105 shadow-md">
+          <a href="#hero" className="flex items-center gap-2.5 sm:gap-3.5 group min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFA81F] flex-shrink-0 flex items-center justify-center font-heading font-black text-[#111111] text-xs sm:text-sm transition-transform group-hover:scale-105 shadow-md">
               SP
             </div>
-            <div className="flex flex-col text-left">
-              <span className="font-heading text-base font-bold tracking-tight text-white flex items-center">
+            <div className="flex flex-col text-left truncate">
+              <span className="font-heading text-sm sm:text-base font-bold tracking-tight text-white flex items-center whitespace-nowrap">
                 Smita Pawar<span className="text-[#FFA81F]">.</span>
               </span>
-              <span className="text-[11px] text-white/60 tracking-wider uppercase font-bold">
+              <span className="text-[10px] sm:text-[11px] text-white/60 tracking-wider uppercase font-bold truncate">
                 Academician &amp; Researcher
               </span>
             </div>
           </a>
 
-          {/* Desktop Navigation Links */}
+          {/* Desktop Navigation Links (Large screens only) */}
           <div className="hidden lg:flex items-center gap-6 text-sm font-semibold tracking-wide text-white/85">
             {[
               { label: 'Home', href: '#hero', id: 'hero' },
@@ -195,8 +195,8 @@ export default function App() {
             })}
           </div>
 
-          {/* Header Action & Mobile Menu Toggle */}
-          <div className="flex items-center gap-3">
+          {/* Desktop Header Actions (Large screens only) */}
+          <div className="hidden lg:flex items-center gap-3">
             <button
               onClick={() => setPubsModalOpen(true)}
               aria-label="View Research Publications"
@@ -213,46 +213,141 @@ export default function App() {
               <span>Let's Talk</span>
               <i className="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-0.5"></i>
             </a>
+          </div>
 
-            {/* Mobile hamburger button */}
+          {/* Mobile Right Controls: 3-Bar Hamburger Menu Button */}
+          <div className="flex items-center gap-2 lg:hidden">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white text-sm hover:bg-white/20 transition-colors"
-              aria-label="Toggle mobile menu"
+              onClick={() => setPubsModalOpen(true)}
+              aria-label="View Research"
+              title="View Research"
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-[#FFA81F] text-xs hover:bg-white/20 active:scale-95 transition-all"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <i className="fa-solid fa-star text-xs"></i>
+            </button>
+
+            {/* Prominent 3-Bar Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex items-center gap-1.5 bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-heading font-extrabold text-xs shadow-md active:scale-95 transition-all"
+              aria-label="Open navigation menu"
+            >
+              {/* 3 bars */}
+              <div className="flex flex-col gap-[3px] w-4 justify-center items-center">
+                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
+                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
+                <span className="w-4 h-[2px] bg-[#111111] rounded-full"></span>
+              </div>
+              <span className="tracking-tight text-xs uppercase">Menu</span>
             </button>
           </div>
         </nav>
+      </header>
 
-        {/* Mobile menu dropdown */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden mt-2 bg-[#111111]/98 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-xl animate-fade-in text-white">
-            <div className="flex flex-col gap-3 text-sm font-semibold">
-              {[
-                { label: 'Home', href: '#hero' },
-                { label: 'About', href: '#about' },
-                { label: 'Education', href: '#education' },
-                { label: 'Experience', href: '#experience' },
-                { label: 'Teaching & Research', href: '#expertise' },
-                { label: 'Publications & Patents', href: '#research' },
-                { label: 'Awards & Honors', href: '#awards' },
-                { label: 'Contact', href: '#contact' },
-              ].map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-2.5 rounded-xl hover:bg-white/10 text-white/90 hover:text-[#FFA81F] transition-colors"
-                >
-                  {item.label}
-                </a>
-              ))}
+      {/* BEGIN: Mobile Slide-Out Drawer Navigation */}
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-[99] transition-opacity duration-300 lg:hidden ${
+          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Slide Drawer Panel */}
+      <aside
+        className={`fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-[#111111] text-white z-[100] shadow-2xl border-l border-white/10 flex flex-col justify-between transform transition-transform duration-300 ease-out lg:hidden ${
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        aria-label="Mobile Navigation Drawer"
+      >
+        {/* Top Header of Drawer */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#FFA81F] flex items-center justify-center font-heading font-black text-[#111111] text-sm shadow-md">
+              SP
+            </div>
+            <div>
+              <h3 className="font-heading font-bold text-base text-white leading-tight">
+                Smita Pawar<span className="text-[#FFA81F]">.</span>
+              </h3>
+              <p className="text-[11px] text-white/60 uppercase tracking-wider font-semibold">
+                VLSI &amp; Embedded Systems
+              </p>
             </div>
           </div>
-        )}
-      </header>
-      {/* END: MainHeader */}
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors active:scale-95"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation Links in Drawer */}
+        <div className="px-4 py-5 flex-1 overflow-y-auto space-y-1.5">
+          <p className="text-[11px] uppercase tracking-widest text-[#FFA81F] font-bold px-3 mb-2">
+            Navigation
+          </p>
+          {[
+            { label: 'Home', href: '#hero', num: '01', icon: 'fa-house' },
+            { label: 'About Smita', href: '#about', num: '02', icon: 'fa-user' },
+            { label: 'Education & Degrees', href: '#education', num: '03', icon: 'fa-graduation-cap' },
+            { label: '20+ Yrs Experience', href: '#experience', num: '04', icon: 'fa-briefcase' },
+            { label: 'Teaching & Pedagogy', href: '#expertise', num: '05', icon: 'fa-chalkboard-user' },
+            { label: 'Research & Patents', href: '#research', num: '06', icon: 'fa-microchip' },
+            { label: 'Achievements & Awards', href: '#awards', num: '07', icon: 'fa-trophy' },
+            { label: 'Get in Touch / Contact', href: '#contact', num: '08', icon: 'fa-envelope' },
+          ].map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white/10 active:bg-white/15 text-white/90 hover:text-[#FFA81F] transition-all group font-medium text-base"
+            >
+              <div className="flex items-center gap-3">
+                <span className="w-7 h-7 rounded-lg bg-white/5 group-hover:bg-[#FFA81F]/20 group-hover:text-[#FFA81F] flex items-center justify-center text-xs text-white/60 transition-colors">
+                  <i className={`fa-solid ${item.icon}`}></i>
+                </span>
+                <span>{item.label}</span>
+              </div>
+              <span className="text-xs font-mono text-white/40 group-hover:text-[#FFA81F] transition-colors">
+                {item.num}
+              </span>
+            </a>
+          ))}
+        </div>
+
+        {/* Drawer Bottom Actions */}
+        <div className="p-5 border-t border-white/10 bg-white/[0.02] space-y-3">
+          <a
+            href="#contact"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-extrabold py-3 px-5 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm uppercase tracking-wide"
+          >
+            <span>Let's Talk</span>
+            <i className="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setPubsModalOpen(true);
+            }}
+            className="w-full bg-white/10 hover:bg-white/15 text-white font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-xs border border-white/10"
+          >
+            <i className="fa-solid fa-star text-[#FFA81F]"></i>
+            <span>View Research Publications &amp; Patents</span>
+          </button>
+
+          <div className="pt-2 text-center text-[11px] text-white/50 leading-relaxed">
+            <p>Assistant Professor, DYPIU Pune</p>
+            <p className="text-white/70">pawarsmita1020@dypiu.ac.in</p>
+          </div>
+        </div>
+      </aside>
+      {/* END: Mobile Slide-Out Drawer Navigation */}
 
       {/* BEGIN: HeroSection */}
       <section
@@ -978,56 +1073,92 @@ export default function App() {
         </div>
 
         {/* 4 Research Stat Blocks */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5 mb-8">
           <div
             onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-6 rounded-3xl flex items-center gap-5 shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all"
+            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
           >
-            <div className="w-14 h-14 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center font-black text-2xl">
-              06
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-inner">
+                06
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FFA81F] bg-[#FFA81F]/10 px-2.5 py-1 rounded-full">
+                Scopus
+              </span>
             </div>
             <div>
-              <span className="text-base sm:text-lg font-bold text-[#111111] block leading-snug">Journals</span>
-              <span className="text-xs sm:text-sm text-[#111111]/70">Peer-reviewed &amp; Scopus</span>
+              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
+                Journals
+              </span>
+              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
+                Peer-reviewed &amp; Scopus
+              </span>
             </div>
           </div>
 
           <div
             onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-6 rounded-3xl flex items-center gap-5 shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all"
+            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
           >
-            <div className="w-14 h-14 rounded-2xl bg-[#111111] text-[#FFA81F] flex items-center justify-center font-black text-2xl">
-              10
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#111111] text-[#FFA81F] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
+                10
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#111111]/70 bg-[#111111]/5 px-2.5 py-1 rounded-full">
+                Global
+              </span>
             </div>
             <div>
-              <span className="text-base sm:text-lg font-bold text-[#111111] block leading-snug">Conferences</span>
-              <span className="text-xs sm:text-sm text-[#111111]/70">National &amp; Int'l</span>
+              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
+                Conferences
+              </span>
+              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
+                National &amp; Int'l
+              </span>
             </div>
           </div>
 
           <div
             onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-6 rounded-3xl flex items-center gap-5 shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all"
+            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
           >
-            <div className="w-14 h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black text-2xl">
-              02
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
+                02
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FFA81F] bg-[#FFA81F]/10 px-2.5 py-1 rounded-full">
+                IP India
+              </span>
             </div>
             <div>
-              <span className="text-base sm:text-lg font-bold text-[#111111] block leading-snug">Patents</span>
-              <span className="text-xs sm:text-sm text-[#111111]/70">Published IP</span>
+              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
+                Patents
+              </span>
+              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
+                Published IP
+              </span>
             </div>
           </div>
 
           <div
             onClick={() => setPubsModalOpen(true)}
-            className="cursor-pointer bg-white border border-[#111111]/15 p-6 rounded-3xl flex items-center gap-5 shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all"
+            className="cursor-pointer bg-white border border-[#111111]/15 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-[#FFA81F] transition-all group"
           >
-            <div className="w-14 h-14 rounded-2xl bg-[#111111] text-white flex items-center justify-center font-black text-2xl">
-              01
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#111111] text-white flex items-center justify-center font-black text-xl sm:text-2xl font-heading shadow-md">
+                01
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#111111]/70 bg-[#111111]/5 px-2.5 py-1 rounded-full">
+                Govt Reg
+              </span>
             </div>
             <div>
-              <span className="text-base sm:text-lg font-bold text-[#111111] block leading-snug">Copyright</span>
-              <span className="text-xs sm:text-sm text-[#111111]/70">Registered Work</span>
+              <span className="text-base sm:text-xl font-bold font-heading text-[#111111] block leading-tight group-hover:text-[#FFA81F] transition-colors">
+                Copyright
+              </span>
+              <span className="text-xs sm:text-sm text-[#111111]/70 block mt-1 leading-snug">
+                Registered Work
+              </span>
             </div>
           </div>
         </div>
@@ -1160,33 +1291,61 @@ export default function App() {
         </div>
 
         {/* 4 Pillars of Leadership */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          <div className="bg-white border border-[#111111]/15 p-5 rounded-3xl text-sm sm:text-base font-bold text-[#111111] flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-base flex-shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
+            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
               <i className="fa-solid fa-shield-halved"></i>
             </div>
-            <span>Paper Confidentiality</span>
+            <div>
+              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
+                Paper Confidentiality
+              </span>
+              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
+                Manuscript Security
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white border border-[#111111]/15 p-5 rounded-3xl text-sm sm:text-base font-bold text-[#111111] flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-base flex-shrink-0">
+          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
+            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
               <i className="fa-solid fa-graduation-cap"></i>
             </div>
-            <span>Convocation Lead</span>
+            <div>
+              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
+                Convocation Lead
+              </span>
+              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
+                Degree Protocols
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white border border-[#111111]/15 p-5 rounded-3xl text-sm sm:text-base font-bold text-[#111111] flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-base flex-shrink-0">
+          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
+            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
               <i className="fa-solid fa-list-check"></i>
             </div>
-            <span>Syllabus Audits</span>
+            <div>
+              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
+                Syllabus Audits
+              </span>
+              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
+                Academic Compliance
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white border border-[#111111]/15 p-5 rounded-3xl text-sm sm:text-base font-bold text-[#111111] flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 rounded-full bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-base flex-shrink-0">
+          <div className="bg-white border border-[#111111]/15 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md hover:border-[#FFA81F] transition-all flex flex-col justify-between group">
+            <div className="w-11 h-11 rounded-2xl bg-[#FFA81F]/20 flex items-center justify-center text-[#FFA81F] text-lg flex-shrink-0 mb-3 shadow-inner group-hover:scale-105 transition-transform">
               <i className="fa-solid fa-users"></i>
             </div>
-            <span>Student Grievances</span>
+            <div>
+              <span className="font-heading font-bold text-sm sm:text-base text-[#111111] block leading-tight">
+                Student Grievances
+              </span>
+              <span className="text-[11px] sm:text-xs text-[#111111]/65 font-medium block mt-1">
+                Support &amp; Welfare
+              </span>
+            </div>
           </div>
         </div>
       </section>
