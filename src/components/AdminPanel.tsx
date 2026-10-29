@@ -34,8 +34,11 @@ import {
   Layers,
   FileText,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Video,
+  Play
 } from 'lucide-react';
+import { getYouTubeEmbedUrl } from '../utils/youtube';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -52,9 +55,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSave,
   onReset
 }) => {
-  const [data, setData] = useState<PortfolioContent>(content);
+  const [data, setData] = useState<PortfolioContent>(() => ({
+    ...content,
+    featuredVideo: content.featuredVideo || {
+      sectionTag: 'Keynote & Video Lectures',
+      titlePrefix: 'Featured Video',
+      titleHighlight: 'Presentation',
+      description:
+        'Keynote presentation on outcome-based engineering education, VLSI design pedagogy, and wireless multimedia networks.',
+      youtubeUrl: 'https://www.youtube.com/watch?v=k7i2X4fB5jM',
+      videoTitle: 'IUCEE Pedagogy & Advanced VLSI Circuit Systems Masterclass',
+      badge: 'Featured Keynote Talk',
+      caption:
+        'Recorded academic session highlighting priority MAC scheduling algorithms, student mentoring pedagogies, and VLSI circuit prototyping.',
+      viewsOrDuration: 'Academic Keynote Session'
+    }
+  }));
   const [activeTab, setActiveTab] = useState<
-    'hero' | 'images' | 'about' | 'research' | 'exam' | 'education' | 'experience' | 'awards' | 'contact' | 'backup'
+    'hero' | 'images' | 'about' | 'research' | 'video' | 'exam' | 'education' | 'experience' | 'awards' | 'contact' | 'backup'
   >('hero');
   const [saveToast, setSaveToast] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -346,7 +364,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             { id: 'hero', label: 'Hero & Headlines', icon: Sparkles, desc: 'Title, name, badges, CTA' },
             { id: 'images', label: 'Images & Photos', icon: ImageIcon, badge: 'Upload', desc: 'Hero cutout & profile' },
             { id: 'about', label: 'About & 4 Stat Boxes', icon: GraduationCap, desc: 'Bio & 4 metric counters' },
-            { id: 'research', label: 'Research (4 Boxes)', icon: BookOpen, desc: 'Journals, Patents, Copyright' },
+            { id: 'research', label: 'Research (4 Boxes & PDF)', icon: BookOpen, desc: 'Journals, Patents, Copyright, PDF' },
+            { id: 'video', label: 'YouTube Video Player', icon: Video, badge: 'Video', desc: 'Big size featured lecture & URL' },
             { id: 'exam', label: 'Exam Head (4 Pillars)', icon: ShieldCheck, desc: 'Confidentiality, Convocation' },
             { id: 'education', label: 'Education Journey', icon: Layers, desc: 'PhD, M.E., B.E., Degrees' },
             { id: 'experience', label: 'Work Experience', icon: Briefcase, desc: 'DYPIU, MITAOE, TELCO' },
@@ -1344,6 +1363,288 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       })
                     }
                     className="w-full bg-[#111111] border-2 border-white/20 rounded-xl p-4 text-base sm:text-lg text-white font-medium leading-relaxed focus:border-[#FFA81F] focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: FEATURED YOUTUBE VIDEO SECTION */}
+          {activeTab === 'video' && (
+            <div className="space-y-8 max-w-5xl">
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading font-black text-[#FFA81F]">
+                  Featured YouTube Video Player (Big Size)
+                </h2>
+                <p className="text-sm sm:text-base text-white/70 mt-1">
+                  Upload or paste a YouTube video link to showcase a prominent, cinema-scale video player positioned directly below Research &amp; Publications.
+                </p>
+              </div>
+
+              {/* YouTube Link Configuration Card */}
+              <div className="bg-[#1C1C1C] p-6 sm:p-8 rounded-3xl border-2 border-[#FFA81F]/40 space-y-6 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center font-black">
+                      <Play className="w-5 h-5 fill-current" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-black text-xl text-white">
+                        YouTube Link &amp; Cinema Player
+                      </h3>
+                      <p className="text-xs sm:text-sm text-white/60">
+                        Paste any YouTube video link (watch URL, youtu.be, shorts, or embed code)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs bg-red-600/90 text-white font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider">
+                    SINGLE FEATURED VIDEO
+                  </span>
+                </div>
+
+                {/* URL Input */}
+                <div>
+                  <label className="text-sm font-bold text-white block mb-2">
+                    YouTube Video URL or Share Link
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                      value={data.featuredVideo.youtubeUrl}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            youtubeUrl: e.target.value
+                          }
+                        })
+                      }
+                      className="flex-1 bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3.5 text-base sm:text-lg text-white font-medium focus:border-[#FFA81F] focus:outline-none"
+                    />
+                    <a
+                      href={data.featuredVideo.youtubeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-5 py-3.5 rounded-xl border border-white/15 flex items-center justify-center gap-2 transition-colors flex-shrink-0"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Test on YouTube</span>
+                    </a>
+                  </div>
+                  <span className="text-xs text-white/50 block mt-2">
+                    Tip: You can paste links like <code className="text-[#FFA81F]">https://www.youtube.com/watch?v=...</code>, <code className="text-[#FFA81F]">https://youtu.be/...</code>, or mobile shorts. It will automatically convert to a responsive embed player.
+                  </span>
+                </div>
+
+                {/* Live Preview Inside Admin Studio */}
+                <div className="pt-2">
+                  <label className="text-xs font-bold text-white/80 uppercase tracking-wider block mb-2">
+                    Live Cinema Player Preview (16:9 Aspect Ratio)
+                  </label>
+                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white/20 bg-black shadow-2xl">
+                    <iframe
+                      src={getYouTubeEmbedUrl(data.featuredVideo.youtubeUrl)}
+                      title={data.featuredVideo.videoTitle || 'YouTube Preview'}
+                      className="absolute inset-0 w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Presets for User */}
+                <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/10">
+                  <span className="text-xs text-white/60 font-bold">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setData({
+                        ...data,
+                        featuredVideo: {
+                          ...data.featuredVideo,
+                          youtubeUrl: 'https://www.youtube.com/watch?v=k7i2X4fB5jM',
+                          videoTitle: 'IUCEE Pedagogy & Advanced VLSI Circuit Systems Masterclass',
+                          badge: 'Featured Keynote Talk'
+                        }
+                      });
+                      showSaveSuccess();
+                    }}
+                    className="text-xs bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+                  >
+                    Load Educational Keynote Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setData({
+                        ...data,
+                        featuredVideo: {
+                          ...data.featuredVideo,
+                          youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                        }
+                      });
+                      showSaveSuccess();
+                    }}
+                    className="text-xs bg-white/5 hover:bg-white/10 text-white/70 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Reset Video Link
+                  </button>
+                </div>
+              </div>
+
+              {/* Video Title, Badge, and Caption Customization */}
+              <div className="bg-[#1C1C1C] p-6 sm:p-8 rounded-3xl border border-white/15 space-y-6 shadow-lg">
+                <span className="text-sm font-black text-[#FFA81F] uppercase tracking-wider block">
+                  Video Titles &amp; Information Overlay
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div className="sm:col-span-2">
+                    <label className="text-sm font-bold text-white block mb-2">
+                      Video Title / Keynote Topic
+                    </label>
+                    <input
+                      type="text"
+                      value={data.featuredVideo.videoTitle}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            videoTitle: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3.5 text-base sm:text-lg text-white font-bold focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-white block mb-2">
+                      Top Badge Text
+                    </label>
+                    <input
+                      type="text"
+                      value={data.featuredVideo.badge}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            badge: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3.5 text-base sm:text-lg text-[#FFA81F] font-bold focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-white block mb-2">
+                    Video Caption &amp; Detailed Academic Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={data.featuredVideo.caption}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        featuredVideo: {
+                          ...data.featuredVideo,
+                          caption: e.target.value
+                        }
+                      })
+                    }
+                    className="w-full bg-[#111111] border-2 border-white/20 rounded-xl p-4 text-base text-white font-medium leading-relaxed focus:border-[#FFA81F] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Section Header Controls */}
+              <div className="bg-[#1C1C1C] p-6 sm:p-8 rounded-3xl border border-white/15 space-y-6 shadow-lg">
+                <span className="text-sm font-black text-[#FFA81F] uppercase tracking-wider block">
+                  Section Headings &amp; Intro
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div>
+                    <label className="text-sm font-bold text-white block mb-2">
+                      Category Tag (Small Pill)
+                    </label>
+                    <input
+                      type="text"
+                      value={data.featuredVideo.sectionTag}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            sectionTag: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-white block mb-2">
+                      Title Prefix
+                    </label>
+                    <input
+                      type="text"
+                      value={data.featuredVideo.titlePrefix}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            titlePrefix: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-white block mb-2">
+                      Highlighted Title (Amber)
+                    </label>
+                    <input
+                      type="text"
+                      value={data.featuredVideo.titleHighlight}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          featuredVideo: {
+                            ...data.featuredVideo,
+                            titleHighlight: e.target.value
+                          }
+                        })
+                      }
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3 text-base text-[#FFA81F] font-bold focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-white block mb-2">
+                    Section Description
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={data.featuredVideo.description}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        featuredVideo: {
+                          ...data.featuredVideo,
+                          description: e.target.value
+                        }
+                      })
+                    }
+                    className="w-full bg-[#111111] border-2 border-white/20 rounded-xl p-4 text-base text-white font-medium leading-relaxed focus:border-[#FFA81F] focus:outline-none"
                   />
                 </div>
               </div>

@@ -180,6 +180,19 @@ export const defaultPortfolioContent: PortfolioContent = {
       footerNote: 'Hardware-Software Co-design for Energy-Efficient Sensor Transceivers'
     }
   },
+  featuredVideo: {
+    sectionTag: 'Keynote & Video Lectures',
+    titlePrefix: 'Featured Video',
+    titleHighlight: 'Presentation',
+    description:
+      'Keynote presentation and technical lecture on outcome-based engineering education, VLSI design pedagogy, and wireless multimedia sensor networks.',
+    youtubeUrl: 'https://www.youtube.com/watch?v=k7i2X4fB5jM',
+    videoTitle: 'IUCEE Pedagogy & Advanced VLSI Circuit Systems Masterclass',
+    badge: 'Featured Keynote Talk',
+    caption:
+      'Recorded academic session highlighting priority MAC scheduling algorithms, student mentoring pedagogies, and VLSI circuit prototyping.',
+    viewsOrDuration: 'Academic Keynote Session'
+  },
   examCoordinator: {
     sectionTag: 'Institutional Leadership',
     titlePrefix: 'Examination',

@@ -168,6 +168,18 @@ export interface PortfolioImages {
   navLogoIcon?: string;    // Custom logo icon/avatar
 }
 
+export interface FeaturedVideoConfig {
+  sectionTag: string;          // e.g. "Keynote & Video Lectures"
+  titlePrefix: string;         // e.g. "Featured"
+  titleHighlight: string;      // e.g. "Lecture & Keynote"
+  description: string;         // e.g. "Watch keynote talks, pedagogical sessions, and VLSI engineering workshops."
+  youtubeUrl: string;          // e.g. "https://www.youtube.com/watch?v=..."
+  videoTitle: string;          // e.g. "IUCEE Engineering Pedagogy & VLSI Design Insights"
+  badge: string;               // e.g. "Official Keynote Presentation"
+  caption: string;             // e.g. "Recorded presentation detailing QoS-based MAC protocols & laboratory learning innovations."
+  viewsOrDuration?: string;    // e.g. "Full Length Keynote Session"
+}
+
 export interface PortfolioContent {
   metaTitle: string;
   hero: HeroConfig;
@@ -175,6 +187,7 @@ export interface PortfolioContent {
   about: AboutConfig;
   expertise: ExpertiseConfig;
   research: ResearchConfig;
+  featuredVideo: FeaturedVideoConfig; // Big size YouTube section directly below Research
   examCoordinator: ExamCoordinatorConfig;
   education: EducationItem[];
   experience: ExperienceItem[];
