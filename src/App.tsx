@@ -1133,13 +1133,13 @@ export default function App() {
       </section>
       {/* END: ResearchPublicationsSection */}
 
-      {/* BEGIN: FeaturedYouTubeVideoSection (Big Size Cinema Player) */}
+      {/* BEGIN: FeaturedYouTubeVideoSection (Compact / Balanced Sized Player) */}
       <section
-        className="py-16 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto"
+        className="py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto"
         data-purpose="featured-youtube-video"
         id="video"
       >
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-5 border-b border-[#111111]/15 gap-4">
+        <div className="max-w-3xl mx-auto flex flex-col md:flex-row md:items-end justify-between mb-6 pb-4 border-b border-[#111111]/15 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-3 h-3 rounded-full bg-red-600"></div>
@@ -1148,54 +1148,62 @@ export default function App() {
                 {content.featuredVideo.sectionTag}
               </span>
             </div>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-heading font-extrabold text-[#111111] leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-heading font-extrabold text-[#111111] leading-tight">
               {content.featuredVideo.titlePrefix}{' '}
               <span className="text-[#FFA81F]">{content.featuredVideo.titleHighlight}</span> ✦
             </h2>
           </div>
-          <p className="text-base sm:text-lg text-[#111111]/80 font-medium max-w-lg">
+          <p className="text-sm sm:text-base text-[#111111]/80 font-medium max-w-sm">
             {content.featuredVideo.description}
           </p>
         </div>
 
-        {/* Big Size Cinematic Video Box */}
-        <div className="bg-[#111111] text-white rounded-3xl p-5 sm:p-8 md:p-10 border-2 border-white/15 shadow-2xl relative overflow-hidden group">
+        {/* Sized & Compact Cinema Video Box */}
+        <div
+          className={`mx-auto bg-[#111111] text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-white/15 shadow-2xl relative overflow-hidden group ${
+            content.featuredVideo.boxSize === 'compact'
+              ? 'max-w-xl'
+              : content.featuredVideo.boxSize === 'large'
+              ? 'max-w-5xl'
+              : 'max-w-3xl'
+          }`}
+        >
           {/* Subtle Ambient Glow Effect */}
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#FFA81F]/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#FFA81F]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Video Header Bar */}
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-white/10">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center font-black shadow-lg flex-shrink-0">
-                <Play className="w-5 h-5 fill-current ml-0.5" />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-black shadow-md flex-shrink-0">
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-black text-[#FFA81F] tracking-wider bg-[#FFA81F]/10 px-3 py-1 rounded-full border border-[#FFA81F]/30">
+                  <span className="text-[11px] sm:text-xs uppercase font-black text-[#FFA81F] tracking-wider bg-[#FFA81F]/10 px-2.5 py-0.5 rounded-full border border-[#FFA81F]/30">
                     {content.featuredVideo.badge}
                   </span>
                   {content.featuredVideo.viewsOrDuration && (
-                    <span className="text-xs text-white/50 font-mono hidden sm:inline">
+                    <span className="text-[11px] text-white/50 font-mono hidden sm:inline">
                       • {content.featuredVideo.viewsOrDuration}
                     </span>
                   )}
                 </div>
-                <h3 className="font-heading font-extrabold text-xl sm:text-2xl md:text-3xl text-white mt-1 leading-snug">
+                <h3 className="font-heading font-extrabold text-base sm:text-lg md:text-xl text-white mt-1 leading-snug">
                   {content.featuredVideo.videoTitle}
                 </h3>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2.5 flex-shrink-0 self-start sm:self-auto">
               <a
                 href={content.featuredVideo.youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-red-600 hover:bg-red-700 text-white font-heading font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full inline-flex items-center gap-2 shadow-lg transition-all active:scale-95"
+                className="bg-red-600 hover:bg-red-700 text-white font-heading font-bold text-xs py-2 px-3.5 rounded-full inline-flex items-center gap-1.5 shadow-md transition-all active:scale-95"
               >
-                <ExternalLink className="w-4 h-4" />
-                <span>Watch on YouTube</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>YouTube</span>
               </a>
 
               {/* Quick Admin Edit Button */}
@@ -1204,17 +1212,17 @@ export default function App() {
                   setAdminAuthenticated(true);
                   setAdminStudioOpen(true);
                 }}
-                className="bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold text-xs py-2.5 px-4 rounded-full inline-flex items-center gap-1.5 transition-colors border border-[#FFA81F]/30 cursor-pointer"
+                className="bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold text-xs py-2 px-3 rounded-full inline-flex items-center gap-1.5 transition-colors border border-[#FFA81F]/30 cursor-pointer"
                 title="Change YouTube video link in Admin Panel"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Change Video</span>
+                <Edit3 className="w-3 h-3" />
+                <span className="hidden sm:inline">Change</span>
               </button>
             </div>
           </div>
 
-          {/* Big Size 16:9 Cinema Video Player */}
-          <div className="relative z-10 w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-white/20 bg-black shadow-2xl">
+          {/* Sized 16:9 Cinema Video Player Box */}
+          <div className="relative z-10 w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-white/20 bg-black shadow-xl">
             <iframe
               src={getYouTubeEmbedUrl(content.featuredVideo.youtubeUrl)}
               title={content.featuredVideo.videoTitle}
@@ -1225,12 +1233,12 @@ export default function App() {
           </div>
 
           {/* Bottom Caption & Highlights */}
-          <div className="relative z-10 mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white/80">
-            <div className="flex items-start gap-3 text-sm sm:text-base leading-relaxed">
-              <Sparkles className="w-5 h-5 text-[#FFA81F] flex-shrink-0 mt-0.5" />
+          <div className="relative z-10 mt-3.5 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-white/80">
+            <div className="flex items-start gap-2 text-xs sm:text-sm leading-relaxed">
+              <Sparkles className="w-4 h-4 text-[#FFA81F] flex-shrink-0 mt-0.5" />
               <span>{content.featuredVideo.caption}</span>
             </div>
-            <span className="text-xs text-white/40 font-mono flex-shrink-0 self-end sm:self-auto">
+            <span className="text-[11px] text-white/40 font-mono flex-shrink-0 self-end sm:self-auto">
               Interactive Video Showcase
             </span>
           </div>

@@ -191,7 +191,8 @@ export const defaultPortfolioContent: PortfolioContent = {
     badge: 'Featured Keynote Talk',
     caption:
       'Recorded academic session highlighting priority MAC scheduling algorithms, student mentoring pedagogies, and VLSI circuit prototyping.',
-    viewsOrDuration: 'Academic Keynote Session'
+    viewsOrDuration: 'Academic Keynote Session',
+    boxSize: 'medium'
   },
   examCoordinator: {
     sectionTag: 'Institutional Leadership',

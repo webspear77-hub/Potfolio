@@ -178,6 +178,7 @@ export interface FeaturedVideoConfig {
   badge: string;               // e.g. "Official Keynote Presentation"
   caption: string;             // e.g. "Recorded presentation detailing QoS-based MAC protocols & laboratory learning innovations."
   viewsOrDuration?: string;    // e.g. "Full Length Keynote Session"
+  boxSize?: 'compact' | 'medium' | 'large'; // Controls the card box width (default: 'medium' ~768px for balanced size)
 }
 
 export interface PortfolioContent {

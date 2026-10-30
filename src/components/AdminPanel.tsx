@@ -1374,10 +1374,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="space-y-8 max-w-5xl">
               <div>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading font-black text-[#FFA81F]">
-                  Featured YouTube Video Player (Big Size)
+                  Featured YouTube Video Player
                 </h2>
                 <p className="text-sm sm:text-base text-white/70 mt-1">
-                  Upload or paste a YouTube video link to showcase a prominent, cinema-scale video player positioned directly below Research &amp; Publications.
+                  Upload or paste a YouTube video link to showcase an interactive video player positioned directly below Research &amp; Publications.
                 </p>
               </div>
 
@@ -1438,12 +1438,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </span>
                 </div>
 
+                {/* Box Sizing Selector for Website Display */}
+                <div className="bg-[#141414] p-4 sm:p-5 rounded-2xl border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-bold text-white block">
+                        Video Box Size on Website
+                      </label>
+                      <p className="text-xs text-white/60">
+                        Adjust how large or compact the video container appears on the portfolio page
+                      </p>
+                    </div>
+                    <span className="text-xs bg-[#FFA81F]/20 text-[#FFA81F] px-2.5 py-1 rounded-full font-bold">
+                      {(data.featuredVideo.boxSize || 'medium').toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData({
+                          ...data,
+                          featuredVideo: { ...data.featuredVideo, boxSize: 'compact' }
+                        });
+                        showSaveSuccess();
+                      }}
+                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                        data.featuredVideo.boxSize === 'compact'
+                          ? 'border-[#FFA81F] bg-[#FFA81F]/15 text-white'
+                          : 'border-white/15 bg-[#1C1C1C] text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="text-xs font-black text-[#FFA81F]">Small / Compact</div>
+                      <div className="text-[11px] text-white/60 mt-0.5">Narrower width (~576px)</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData({
+                          ...data,
+                          featuredVideo: { ...data.featuredVideo, boxSize: 'medium' }
+                        });
+                        showSaveSuccess();
+                      }}
+                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                        (data.featuredVideo.boxSize === 'medium' || !data.featuredVideo.boxSize)
+                          ? 'border-[#FFA81F] bg-[#FFA81F]/15 text-white'
+                          : 'border-white/15 bg-[#1C1C1C] text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="text-xs font-black text-[#FFA81F]">Balanced (Default)</div>
+                      <div className="text-[11px] text-white/60 mt-0.5">Medium width (~768px)</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData({
+                          ...data,
+                          featuredVideo: { ...data.featuredVideo, boxSize: 'large' }
+                        });
+                        showSaveSuccess();
+                      }}
+                      className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                        data.featuredVideo.boxSize === 'large'
+                          ? 'border-[#FFA81F] bg-[#FFA81F]/15 text-white'
+                          : 'border-white/15 bg-[#1C1C1C] text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="text-xs font-black text-[#FFA81F]">Large / Wide</div>
+                      <div className="text-[11px] text-white/60 mt-0.5">Wide cinema (~1024px)</div>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Live Preview Inside Admin Studio */}
                 <div className="pt-2">
                   <label className="text-xs font-bold text-white/80 uppercase tracking-wider block mb-2">
-                    Live Cinema Player Preview (16:9 Aspect Ratio)
+                    Live Video Player Preview (16:9 Aspect Ratio)
                   </label>
-                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white/20 bg-black shadow-2xl">
+                  <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-xl sm:rounded-2xl overflow-hidden border-2 border-white/20 bg-black shadow-xl">
                     <iframe
                       src={getYouTubeEmbedUrl(data.featuredVideo.youtubeUrl)}
                       title={data.featuredVideo.videoTitle || 'YouTube Preview'}
