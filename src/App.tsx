@@ -206,7 +206,19 @@ export default function App() {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        setAdminStudioOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Update browser document title when meta title changes
@@ -245,7 +257,7 @@ export default function App() {
           </a>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-white/80">
+          <div className="hidden md:flex items-center gap-5 lg:gap-7 xl:gap-8 text-xs sm:text-sm font-semibold text-white/85">
             {[
               { label: 'Home', href: '#hero', id: 'hero' },
               { label: 'About', href: '#about', id: 'about' },
@@ -269,54 +281,12 @@ export default function App() {
             ))}
           </div>
 
-          {/* Desktop Right Action Buttons */}
-          <div className="hidden md:flex items-center gap-2.5">
-            {/* Quick Admin Access */}
-            <button
-              onClick={() => {
-                if (adminAuthenticated) {
-                  setAdminStudioOpen(true);
-                } else {
-                  setAdminModalOpen(true);
-                }
-              }}
-              className="bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold text-xs py-2 px-3.5 rounded-full flex items-center gap-1.5 transition-colors border border-[#FFA81F]/30"
-              title="Open Website Admin Panel"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
-
-            <a
-              href="#contact"
-              className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-extrabold text-xs sm:text-sm py-2 sm:py-2.5 px-4 sm:px-6 rounded-full inline-flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
-            >
-              <span>Let's Talk</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </a>
-          </div>
-
           {/* Mobile Right Controls: Prominent 3-bar Hamburger Button */}
-          <div className="flex md:hidden items-center gap-1.5 flex-shrink-0">
-            {/* Mobile Admin Icon */}
-            <button
-              onClick={() => {
-                if (adminAuthenticated) {
-                  setAdminStudioOpen(true);
-                } else {
-                  setAdminModalOpen(true);
-                }
-              }}
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-[#FFA81F] flex items-center justify-center border border-[#FFA81F]/30"
-              title="Open Admin Panel"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-
+          <div className="flex md:hidden items-center flex-shrink-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="bg-[#FFA81F] hover:bg-[#E59415] active:scale-95 text-[#111111] font-heading font-black text-xs px-3 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="bg-[#FFA81F] hover:bg-[#E59415] active:scale-95 text-[#111111] font-heading font-black text-xs px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
               aria-label="Open mobile navigation menu"
             >
               <Menu className="w-4 h-4 stroke-[3]" />
