@@ -1,0 +1,23 @@
+-- Hostinger MySQL Database Schema for Portfolio
+-- Run this in phpMyAdmin under database: u835254770_portfolio
+
+CREATE TABLE IF NOT EXISTS `portfolio_content` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `content_json` LONGTEXT NOT NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `contact_messages` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL,
+  `email` VARCHAR(191) NOT NULL,
+  `category` VARCHAR(100) DEFAULT 'General Inquiry',
+  `message` TEXT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `cv_requests` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `email` VARCHAR(191) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

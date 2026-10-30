@@ -36,6 +36,12 @@ import { defaultPortfolioContent } from './data/defaultContent';
 import { AdminPanel } from './components/AdminPanel';
 import { loadPdfDocument, storePdfDocument } from './utils/pdfStorage';
 import { getYouTubeEmbedUrl } from './utils/youtube';
+import {
+  fetchRemoteContent,
+  saveRemoteContent,
+  submitContactMessage,
+  submitCvRequest
+} from './utils/api';
 
 export default function App() {
   // Mobile navigation state
@@ -123,6 +129,20 @@ export default function App() {
     hydratePdfs();
   }, []);
 
+  // Hydrate content from Hostinger MySQL database if available
+  useEffect(() => {
+    fetchRemoteContent().then((remote) => {
+      if (remote) {
+        setContent((prev) => ({
+          ...defaultPortfolioContent,
+          ...prev,
+          ...remote,
+          featuredVideo: remote.featuredVideo || prev.featuredVideo || defaultPortfolioContent.featuredVideo
+        }));
+      }
+    });
+  }, []);
+
   // Save updated content
   const handleSaveContent = (updated: PortfolioContent) => {
     // If any pdfUrl is a data URI, store into IndexedDB so localStorage stays under quota
@@ -133,6 +153,12 @@ export default function App() {
     });
 
     setContent(updated);
+
+    // Sync to Hostinger MySQL database in background
+    saveRemoteContent(updated).catch((err) => {
+      console.warn('Sync to Hostinger database warning:', err);
+    });
+
     try {
       localStorage.setItem('smita_portfolio_content_v1', JSON.stringify(updated));
     } catch (e) {
@@ -1480,6 +1506,13 @@ export default function App() {
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   setFormSubmitted(true);
+                  // Save inquiry to Hostinger MySQL database (contact_messages table)
+                  submitContactMessage({
+                    name: formState.name,
+                    email: formState.email,
+                    category: formState.category,
+                    message: formState.message
+                  });
                   setTimeout(() => {
                     window.location.href = `mailto:${content.contact.email}?subject=${encodeURIComponent(
                       `Inquiry from ${formState.name} - ${formState.category}`
@@ -1742,6 +1775,8 @@ export default function App() {
               <form onSubmit={(e) => {
                 e.preventDefault();
                 setCvRequested(true);
+                // Save CV request to Hostinger MySQL database (cv_requests table)
+                submitCvRequest(cvEmail);
                 setTimeout(() => {
                   window.location.href = `mailto:${content.contact.email}?subject=${encodeURIComponent(
                     `Request for Academic CV - ${content.hero.fullName}`
