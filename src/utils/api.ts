@@ -1,7 +1,7 @@
 import { PortfolioContent } from '../types/portfolio';
 
-// Automatically uses relative '/api' on Netlify or custom VITE_API_BASE_URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// Automatically uses relative '/.netlify/functions' on Netlify or custom VITE_API_BASE_URL
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/.netlify/functions';
 
 /**
  * Fetch latest portfolio content from MySQL
