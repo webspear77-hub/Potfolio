@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   PortfolioContent,
   StatBox,
@@ -99,7 +99,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }));
   const [activeTab, setActiveTab] = useState<
     'hero' | 'images' | 'about' | 'research' | 'video' | 'exam' | 'education' | 'experience' | 'awards' | 'contact' | 'backup'
-  >('hero');
+  >(() => {
+    try {
+      const savedTab = sessionStorage.getItem('smita_admin_active_tab');
+      if (savedTab) return savedTab as any;
+    } catch {}
+    return 'hero';
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('smita_admin_active_tab', activeTab);
+    } catch {}
+  }, [activeTab]);
   const [saveToast, setSaveToast] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{
     saving: boolean;

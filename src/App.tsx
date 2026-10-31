@@ -90,7 +90,39 @@ export default function App() {
       return false;
     }
   });
-  const [adminStudioOpen, setAdminStudioOpen] = useState(false);
+  const [adminStudioOpen, setAdminStudioOpen] = useState<boolean>(() => {
+    try {
+      const isAuth =
+        localStorage.getItem('smita_admin_authenticated') === 'true' ||
+        sessionStorage.getItem('smita_admin_authenticated') === 'true';
+      const studioActive = sessionStorage.getItem('smita_admin_studio_active') === 'true';
+      const hasAdminInUrl =
+        window.location.search.includes('admin') ||
+        window.location.hash.includes('admin');
+      return isAuth && (studioActive || hasAdminInUrl);
+    } catch {
+      return false;
+    }
+  });
+
+  // Sync admin studio state to sessionStorage and URL hash so page refresh keeps admin inside the studio
+  useEffect(() => {
+    try {
+      if (adminStudioOpen) {
+        sessionStorage.setItem('smita_admin_studio_active', 'true');
+        if (window.location.hash !== '#admin') {
+          window.history.replaceState(null, '', '#admin');
+        }
+      } else {
+        sessionStorage.removeItem('smita_admin_studio_active');
+        if (window.location.hash === '#admin') {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not sync admin studio state:', e);
+    }
+  }, [adminStudioOpen]);
 
   // Accordion state (first one open by default)
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0);
@@ -252,9 +284,11 @@ export default function App() {
         sessionStorage.setItem('smita_admin_authenticated', 'true');
       }
 
-      // Clean the query parameter from address bar
+      sessionStorage.setItem('smita_admin_studio_active', 'true');
+
+      // Set hash to #admin so page refresh stays in Admin Studio
       if (window.history && window.history.replaceState) {
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState({}, document.title, '#admin');
       }
     } else {
       setAdminLoginError('Access Denied: Invalid User ID or Password. Please try again.');
@@ -269,6 +303,8 @@ export default function App() {
     try {
       localStorage.removeItem('smita_admin_authenticated');
       sessionStorage.removeItem('smita_admin_authenticated');
+      sessionStorage.removeItem('smita_admin_studio_active');
+      sessionStorage.removeItem('smita_admin_active_tab');
     } catch {}
     if (window.history && window.history.replaceState) {
       window.history.replaceState({}, document.title, window.location.pathname);
