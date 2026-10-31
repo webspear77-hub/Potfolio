@@ -328,6 +328,7 @@ export const defaultPortfolioContent: PortfolioContent = {
     phone: '+91 9764027444',
     location: 'DYPIU Campus, Sector 29, Nigdi Pradhikaran, Akurdi, Pune, MH, India',
     linkedinUrl: 'https://www.linkedin.com',
+    youtubeUrl: 'https://www.youtube.com',
     consultationFeeText: 'Available for University Curriculum Consultations',
     workingHoursText: 'Monday – Friday: 9:00 AM – 5:30 PM IST'
   }

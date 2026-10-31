@@ -158,6 +158,7 @@ export interface ContactInfo {
   phone: string;
   location: string;
   linkedinUrl: string;
+  youtubeUrl?: string;
   consultationFeeText?: string;
   workingHoursText?: string;
 }

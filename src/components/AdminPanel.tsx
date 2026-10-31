@@ -36,7 +36,9 @@ import {
   Maximize2,
   Minimize2,
   Video,
-  Play
+  Play,
+  Linkedin,
+  Youtube
 } from 'lucide-react';
 import { getYouTubeEmbedUrl } from '../utils/youtube';
 
@@ -2399,7 +2401,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-white block mb-2">LinkedIn Profile URL</label>
+                  <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2">
+                    <Linkedin className="w-4 h-4 text-[#0077b5]" />
+                    <span>LinkedIn Profile URL</span>
+                  </label>
                   <input
                     type="text"
                     value={data.contact.linkedinUrl}
@@ -2407,6 +2412,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       setData({
                         ...data,
                         contact: { ...data.contact, linkedinUrl: e.target.value }
+                      })
+                    }
+                    className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3.5 text-base text-white focus:border-[#FFA81F] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-white block mb-2 flex items-center gap-2">
+                    <Youtube className="w-4 h-4 text-[#FF0000]" />
+                    <span>YouTube Channel URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://www.youtube.com/@channel or channel link"
+                    value={data.contact.youtubeUrl || ''}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        contact: { ...data.contact, youtubeUrl: e.target.value }
                       })
                     }
                     className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3.5 text-base text-white focus:border-[#FFA81F] focus:outline-none"

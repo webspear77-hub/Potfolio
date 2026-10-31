@@ -29,7 +29,9 @@ import {
   Edit3,
   FileText,
   Play,
-  Video
+  Video,
+  Linkedin,
+  Youtube
 } from 'lucide-react';
 import { PortfolioContent, AwardItem, ResearchStatBox } from './types/portfolio';
 import { defaultPortfolioContent } from './data/defaultContent';
@@ -496,7 +498,7 @@ export default function App() {
               <span className="text-xs sm:text-sm font-extrabold text-[#111111]/70 uppercase tracking-wider block mb-3">
                 {content.hero.cards.followTitle}
               </span>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
                 <a
                   className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
                   href={`mailto:${content.contact.email}`}
@@ -505,13 +507,22 @@ export default function App() {
                   <Mail className="w-4 h-4" />
                 </a>
                 <a
-                  className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FFA81F] hover:text-[#111111] transition-colors shadow-sm"
+                  className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#0077b5] hover:text-white transition-colors shadow-sm"
                   href={content.contact.linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="LinkedIn"
+                  title="LinkedIn Profile"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <Linkedin className="w-4 h-4" />
+                </a>
+                <a
+                  className="w-10 h-10 rounded-full bg-[#111111] text-white text-sm flex items-center justify-center hover:bg-[#FF0000] hover:text-white transition-colors shadow-sm"
+                  href={content.contact.youtubeUrl || content.featuredVideo?.youtubeUrl || 'https://www.youtube.com'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="YouTube Channel"
+                >
+                  <Youtube className="w-4 h-4" />
                 </a>
                 <button
                   onClick={() => setPubsModalOpen(true)}
@@ -1469,6 +1480,27 @@ export default function App() {
                         {content.contact.location}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/10 flex items-center gap-3">
+                    <a
+                      href={content.contact.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-white/10 hover:bg-[#0077b5] text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-white/10 shadow-sm"
+                    >
+                      <Linkedin className="w-4 h-4 text-white" />
+                      <span>LinkedIn Profile</span>
+                    </a>
+                    <a
+                      href={content.contact.youtubeUrl || content.featuredVideo?.youtubeUrl || 'https://www.youtube.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-white/10 hover:bg-[#FF0000] text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-white/10 shadow-sm"
+                    >
+                      <Youtube className="w-4 h-4 text-white" />
+                      <span>YouTube Channel</span>
+                    </a>
                   </div>
                 </div>
               </div>
