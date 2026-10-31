@@ -26,21 +26,35 @@ export async function fetchRemoteContent(): Promise<PortfolioContent | null> {
 /**
  * Save updated portfolio content to MySQL
  */
-export async function saveRemoteContent(content: PortfolioContent): Promise<boolean> {
+export async function saveRemoteContent(content: PortfolioContent): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
+    const jsonStr = JSON.stringify(content);
+    // Check if payload exceeds Netlify's 5.5MB threshold
+    if (jsonStr.length > 5.5 * 1024 * 1024) {
+      return {
+        success: false,
+        error: 'PDF or image file is too large for cloud database sync (>5MB). Please use a Google Drive link or compress the PDF.'
+      };
+    }
     const res = await fetch(`${API_BASE_URL}/content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(content)
+      body: jsonStr
     });
+    if (!res.ok) {
+      if (res.status === 413) {
+        return { success: false, error: 'Document exceeds 5MB serverless limit. Please use a Google Drive or hosted link.' };
+      }
+      return { success: false, error: `Server error (${res.status})` };
+    }
     const json = await res.json();
-    return !!json.success;
-  } catch (err) {
+    return { success: !!json.success, message: json.message, error: json.error };
+  } catch (err: any) {
     console.error('Failed to save content to database:', err);
-    return false;
+    return { success: false, error: err.message || 'Network connection failed' };
   }
 }
 

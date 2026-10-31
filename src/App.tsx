@@ -144,7 +144,7 @@ export default function App() {
   }, []);
 
   // Save updated content
-  const handleSaveContent = (updated: PortfolioContent) => {
+  const handleSaveContent = async (updated: PortfolioContent): Promise<{ success: boolean; error?: string }> => {
     // If any pdfUrl is a data URI, store into IndexedDB so localStorage stays under quota
     updated.research.stats.forEach((stat) => {
       if (stat.pdfUrl && stat.pdfUrl.startsWith('data:')) {
@@ -153,11 +153,6 @@ export default function App() {
     });
 
     setContent(updated);
-
-    // Sync to Hostinger MySQL database in background
-    saveRemoteContent(updated).catch((err) => {
-      console.warn('Sync to Hostinger database warning:', err);
-    });
 
     try {
       localStorage.setItem('smita_portfolio_content_v1', JSON.stringify(updated));
@@ -179,6 +174,9 @@ export default function App() {
         console.error('Failed to save to localStorage:', e2);
       }
     }
+
+    // Sync to Hostinger MySQL database
+    return await saveRemoteContent(updated);
   };
 
   // Reset content to factory default

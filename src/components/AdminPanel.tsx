@@ -44,7 +44,7 @@ interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
   content: PortfolioContent;
-  onSave: (updated: PortfolioContent) => void;
+  onSave: (updated: PortfolioContent) => Promise<{ success: boolean; error?: string }> | void;
   onReset: () => void;
 }
 
@@ -75,6 +75,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     'hero' | 'images' | 'about' | 'research' | 'video' | 'exam' | 'education' | 'experience' | 'awards' | 'contact' | 'backup'
   >('hero');
   const [saveToast, setSaveToast] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{
+    saving: boolean;
+    success?: boolean;
+    message?: string;
+  }>({ saving: false });
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // File upload input references
@@ -157,8 +162,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      setUploadError('File size is larger than 25MB. Please upload a PDF under 20MB.');
+    if (file.size > 3.5 * 1024 * 1024) {
+      setUploadError(`File is ${fileSizeFormatted}. Direct database upload supports PDFs up to 3.5MB. For larger documents, please paste a Google Drive public link in the box below!`);
       return;
     }
 
@@ -245,9 +250,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setTimeout(() => setSaveToast(false), 2800);
   };
 
-  const handleApplySave = () => {
-    onSave(data);
-    showSaveSuccess();
+  const handleApplySave = async () => {
+    setSaveStatus({ saving: true, message: 'Syncing to Hostinger MySQL Database...' });
+    try {
+      const res = await onSave(data);
+      if (res && res.success) {
+        setSaveStatus({
+          saving: false,
+          success: true,
+          message: 'Saved & Published to Hostinger MySQL Database successfully!'
+        });
+      } else if (res && res.error) {
+        setSaveStatus({
+          saving: false,
+          success: false,
+          message: res.error
+        });
+      } else {
+        setSaveStatus({
+          saving: false,
+          success: true,
+          message: 'Website updated and published!'
+        });
+      }
+    } catch (err: any) {
+      setSaveStatus({
+        saving: false,
+        success: false,
+        message: err.message || 'Save failed'
+      });
+    }
+    setTimeout(() => {
+      setSaveStatus({ saving: false });
+    }, 4500);
   };
 
   // Export content to a JSON file for backup
@@ -343,10 +378,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </header>
 
       {/* Floating Save Notification Toast */}
-      {saveToast && (
-        <div className="fixed top-24 right-8 z-[110] bg-[#22C55E] text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-base font-bold animate-bounce border border-white/20">
-          <CheckCircle className="w-6 h-6" />
-          <span>Website successfully updated and published!</span>
+      {saveStatus.saving && (
+        <div className="fixed top-24 right-8 z-[110] bg-[#FFA81F] text-[#111111] px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-base font-bold animate-pulse border border-white/20">
+          <Sparkles className="w-6 h-6 animate-spin" />
+          <span>Syncing to Hostinger MySQL Database...</span>
+        </div>
+      )}
+      {!saveStatus.saving && saveStatus.message && (
+        <div className={`fixed top-24 right-8 z-[110] ${saveStatus.success ? 'bg-[#22C55E]' : 'bg-[#EF4444]'} text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-base font-bold animate-bounce border border-white/20 max-w-md`}>
+          {saveStatus.success ? <CheckCircle className="w-6 h-6 flex-shrink-0" /> : <AlertCircle className="w-6 h-6 flex-shrink-0" />}
+          <span>{saveStatus.message}</span>
         </div>
       )}
 
