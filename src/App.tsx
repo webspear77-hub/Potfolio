@@ -213,7 +213,7 @@ export default function App() {
     if (e) e.preventDefault();
     setAdminLoginError(null);
 
-    let validUserId = 'pawarsmita1020@dypiu.ac.in';
+    let validUserId = 'smita.pawar@dypiu.ac.in';
     let validPassword = 'Smita@DYPIU2026';
 
     try {
@@ -230,9 +230,9 @@ export default function App() {
 
     const userMatches =
       inputUser === validUserId ||
-      inputUser === 'admin' ||
+      inputUser === 'smita.pawar@dypiu.ac.in' ||
       inputUser === 'pawarsmita1020@dypiu.ac.in' ||
-      inputUser === 'smita.pawar@dypiu.ac.in';
+      inputUser === 'admin';
 
     const passMatches =
       inputPass === validPassword ||
@@ -1790,7 +1790,7 @@ export default function App() {
                       setAdminUserIdInput(e.target.value);
                       setAdminLoginError(null);
                     }}
-                    placeholder="Enter Admin User ID or Email"
+                    placeholder="smita.pawar@dypiu.ac.in"
                     className="w-full bg-[#111111] text-white placeholder-white/30 text-sm sm:text-base rounded-xl border border-white/20 pl-11 pr-4 py-3 focus:outline-none focus:border-[#FFA81F]"
                   />
                   <User className="w-4 h-4 text-white/40 absolute left-4 top-3.5" />

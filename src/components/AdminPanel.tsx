@@ -68,7 +68,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       const stored = localStorage.getItem('smita_admin_credentials');
       if (stored) return JSON.parse(stored);
     } catch {}
-    return { userId: 'pawarsmita1020@dypiu.ac.in', password: 'Smita@DYPIU2026' };
+    return { userId: 'smita.pawar@dypiu.ac.in', password: 'Smita@DYPIU2026' };
   });
   const [securitySaved, setSecuritySaved] = useState(false);
 
