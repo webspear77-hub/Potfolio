@@ -181,17 +181,17 @@ export const defaultPortfolioContent: PortfolioContent = {
     }
   },
   featuredVideo: {
-    sectionTag: 'Keynote & Video Lectures',
-    titlePrefix: 'Featured Video',
-    titleHighlight: 'Presentation',
+    sectionTag: 'Video Lectures & Talks',
+    titlePrefix: 'Academic',
+    titleHighlight: 'Lecture',
     description:
-      'Keynote presentation and technical lecture on outcome-based engineering education, VLSI design pedagogy, and wireless multimedia sensor networks.',
-    youtubeUrl: 'https://www.youtube.com/watch?v=k7i2X4fB5jM',
-    videoTitle: 'IUCEE Pedagogy & Advanced VLSI Circuit Systems Masterclass',
-    badge: 'Featured Keynote Talk',
+      'Recorded lectures and technical presentations on VLSI design, embedded systems, and outcome-based engineering education.',
+    youtubeUrl: '',
+    videoTitle: 'IUCEE Pedagogy & Advanced VLSI Circuit Systems',
+    badge: 'Academic Lecture',
     caption:
-      'Recorded academic session highlighting priority MAC scheduling algorithms, student mentoring pedagogies, and VLSI circuit prototyping.',
-    viewsOrDuration: 'Academic Keynote Session',
+      'Technical session on priority MAC scheduling algorithms, VLSI circuit prototyping, and student mentoring in engineering education.',
+    viewsOrDuration: '',
     boxSize: 'medium'
   },
   examCoordinator: {

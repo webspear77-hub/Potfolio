@@ -1189,41 +1189,38 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 flex-shrink-0 self-start sm:self-auto">
-              <a
-                href={content.featuredVideo.youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-red-600 hover:bg-red-700 text-white font-heading font-bold text-xs py-2 px-3.5 rounded-full inline-flex items-center gap-1.5 shadow-md transition-all active:scale-95"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>YouTube</span>
-              </a>
-
-              {/* Quick Admin Edit Button */}
-              <button
-                onClick={() => {
-                  setAdminAuthenticated(true);
-                  setAdminStudioOpen(true);
-                }}
-                className="bg-white/10 hover:bg-white/20 text-[#FFA81F] font-bold text-xs py-2 px-3 rounded-full inline-flex items-center gap-1.5 transition-colors border border-[#FFA81F]/30 cursor-pointer"
-                title="Change YouTube video link in Admin Panel"
-              >
-                <Edit3 className="w-3 h-3" />
-                <span className="hidden sm:inline">Change</span>
-              </button>
-            </div>
+            <a
+              href={content.featuredVideo.youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-red-600 hover:bg-red-700 text-white font-heading font-bold text-xs py-2 px-4 rounded-full inline-flex items-center gap-1.5 shadow-md transition-all active:scale-95 flex-shrink-0 self-start sm:self-auto"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Watch on YouTube</span>
+            </a>
           </div>
 
           {/* Sized 16:9 Cinema Video Player Box */}
           <div className="relative z-10 w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-white/20 bg-black shadow-xl">
-            <iframe
-              src={getYouTubeEmbedUrl(content.featuredVideo.youtubeUrl)}
-              title={content.featuredVideo.videoTitle}
-              className="absolute inset-0 w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
+            {content.featuredVideo.youtubeUrl ? (
+              <iframe
+                src={getYouTubeEmbedUrl(content.featuredVideo.youtubeUrl)}
+                title={content.featuredVideo.videoTitle}
+                className="absolute inset-0 w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="eager"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0f0f0f] text-white/50">
+                <div className="w-14 h-14 rounded-2xl bg-red-600/20 flex items-center justify-center">
+                  <Play className="w-7 h-7 text-red-500 fill-current ml-1" />
+                </div>
+                <p className="text-sm font-semibold">Add your YouTube link in Admin Studio</p>
+                <p className="text-xs text-white/30">Press Ctrl+Shift+A → Video Lectures section</p>
+              </div>
+            )}
           </div>
 
           {/* Bottom Caption & Highlights */}
