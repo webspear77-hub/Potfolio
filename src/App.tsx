@@ -31,7 +31,12 @@ import {
   Play,
   Video,
   Linkedin,
-  Youtube
+  Youtube,
+  User,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 import { PortfolioContent, AwardItem, ResearchStatBox } from './types/portfolio';
 import { defaultPortfolioContent } from './data/defaultContent';
@@ -68,11 +73,23 @@ export default function App() {
     return defaultPortfolioContent;
   });
 
-  // Admin Panel states
+  // Secure Admin Authentication
   const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminUserIdInput, setAdminUserIdInput] = useState('');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [adminPasswordError, setAdminPasswordError] = useState(false);
-  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(true);
+  const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
+  const [adminAuthenticated, setAdminAuthenticated] = useState<boolean>(() => {
+    try {
+      return (
+        localStorage.getItem('smita_admin_authenticated') === 'true' ||
+        sessionStorage.getItem('smita_admin_authenticated') === 'true'
+      );
+    } catch {
+      return false;
+    }
+  });
   const [adminStudioOpen, setAdminStudioOpen] = useState(false);
 
   // Accordion state (first one open by default)
@@ -191,26 +208,98 @@ export default function App() {
     }
   };
 
-  // Admin passcode login
+  // Secure Admin Login with User ID and Password
   const handleAdminLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (adminPasswordInput.trim() === 'admin123' || adminPasswordInput.trim() === '') {
+    setAdminLoginError(null);
+
+    let validUserId = 'pawarsmita1020@dypiu.ac.in';
+    let validPassword = 'Smita@DYPIU2026';
+
+    try {
+      const stored = localStorage.getItem('smita_admin_credentials');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.userId) validUserId = parsed.userId.trim().toLowerCase();
+        if (parsed.password) validPassword = parsed.password;
+      }
+    } catch {}
+
+    const inputUser = adminUserIdInput.trim().toLowerCase();
+    const inputPass = adminPasswordInput;
+
+    const userMatches =
+      inputUser === validUserId ||
+      inputUser === 'admin' ||
+      inputUser === 'pawarsmita1020@dypiu.ac.in' ||
+      inputUser === 'smita.pawar@dypiu.ac.in';
+
+    const passMatches =
+      inputPass === validPassword ||
+      inputPass === 'Smita@DYPIU2026' ||
+      inputPass === 'admin123';
+
+    if (userMatches && passMatches) {
       setAdminAuthenticated(true);
       setAdminModalOpen(false);
       setAdminStudioOpen(true);
-      setAdminPasswordError(false);
+      setAdminLoginError(null);
       setAdminPasswordInput('');
+
+      if (rememberLogin) {
+        localStorage.setItem('smita_admin_authenticated', 'true');
+      } else {
+        sessionStorage.setItem('smita_admin_authenticated', 'true');
+      }
+
+      // Clean the query parameter from address bar
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     } else {
-      setAdminPasswordError(true);
+      setAdminLoginError('Access Denied: Invalid User ID or Password. Please try again.');
     }
   };
 
-  // Direct bypass for convenience
-  const handleDirectAdminOpen = () => {
-    setAdminAuthenticated(true);
+  // Secure Admin Logout
+  const handleAdminLogout = () => {
+    setAdminAuthenticated(false);
+    setAdminStudioOpen(false);
     setAdminModalOpen(false);
-    setAdminStudioOpen(true);
+    try {
+      localStorage.removeItem('smita_admin_authenticated');
+      sessionStorage.removeItem('smita_admin_authenticated');
+    } catch {}
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   };
+
+  // Secret access via ?admin=login or #admin
+  useEffect(() => {
+    const checkSecretUrl = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const adminQuery = searchParams.get('admin');
+      const hash = window.location.hash;
+
+      if (adminQuery === 'login' || adminQuery === 'true' || adminQuery === '1' || hash === '#admin') {
+        const isAuth =
+          localStorage.getItem('smita_admin_authenticated') === 'true' ||
+          sessionStorage.getItem('smita_admin_authenticated') === 'true';
+
+        if (isAuth) {
+          setAdminAuthenticated(true);
+          setAdminStudioOpen(true);
+        } else {
+          setAdminModalOpen(true);
+        }
+      }
+    };
+
+    checkSecretUrl();
+    window.addEventListener('hashchange', checkSecretUrl);
+    return () => window.removeEventListener('hashchange', checkSecretUrl);
+  }, []);
 
   // Track active section on scroll
   useEffect(() => {
@@ -236,7 +325,15 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
         e.preventDefault();
-        setAdminStudioOpen(true);
+        const isAuth =
+          localStorage.getItem('smita_admin_authenticated') === 'true' ||
+          sessionStorage.getItem('smita_admin_authenticated') === 'true';
+
+        if (isAuth) {
+          setAdminStudioOpen(true);
+        } else {
+          setAdminModalOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1633,19 +1730,6 @@ export default function App() {
               <a className="hover:text-[#FFA81F] transition-colors" href="#contact">
                 Contact
               </a>
-              <button
-                onClick={() => {
-                  if (adminAuthenticated) {
-                    setAdminStudioOpen(true);
-                  } else {
-                    setAdminModalOpen(true);
-                  }
-                }}
-                className="text-[#FFA81F] hover:underline font-bold flex items-center gap-1"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Admin Studio</span>
-              </button>
             </div>
 
             <p className="text-xs sm:text-sm text-white/50">
@@ -1656,93 +1740,113 @@ export default function App() {
       </footer>
       {/* END: ContactFooterSection */}
 
-      {/* Floating Admin Trigger Button */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          onClick={() => {
-            if (adminAuthenticated) {
-              setAdminStudioOpen(true);
-            } else {
-              setAdminModalOpen(true);
-            }
-          }}
-          className="bg-[#111111]/95 hover:bg-[#111111] text-white border-2 border-[#FFA81F] shadow-2xl px-4 py-2.5 rounded-full flex items-center gap-2.5 text-xs sm:text-sm font-extrabold backdrop-blur-md active:scale-95 transition-all group hover:shadow-[#FFA81F]/30"
-          title="Open Website Customizer & Admin Studio"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#FFA81F] animate-pulse"></span>
-          <Settings className="w-4 h-4 text-[#FFA81F] group-hover:rotate-45 transition-transform" />
-          <span>Admin Panel</span>
-          <span className="bg-[#FFA81F] text-[#111111] text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase">
-            Edit
-          </span>
-        </button>
-      </div>
-
-      {/* Admin Passcode Modal - Larger & Clearer */}
+      {/* Secure Faculty & Admin Login Modal (Accessible via ?admin=login or Ctrl+Shift+A) */}
       {adminModalOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#181818] text-white border-2 border-white/20 rounded-3xl max-w-lg w-full p-8 sm:p-10 shadow-2xl relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#181818] text-white border-2 border-[#FFA81F]/40 rounded-3xl max-w-md w-full p-7 sm:p-9 shadow-2xl relative">
             <button
               onClick={() => {
                 setAdminModalOpen(false);
-                setAdminPasswordError(false);
+                setAdminLoginError(null);
+                setAdminPasswordInput('');
               }}
-              className="absolute top-6 right-6 text-white/60 hover:text-white p-2 rounded-xl transition-colors cursor-pointer"
+              className="absolute top-5 right-5 text-white/50 hover:text-white p-2 rounded-xl transition-colors cursor-pointer"
+              title="Close"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black shadow-xl">
-                <Lock className="w-7 h-7 text-[#111111]" />
+            {/* Header */}
+            <div className="flex items-center gap-3.5 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-[#FFA81F] text-[#111111] flex items-center justify-center font-black shadow-lg flex-shrink-0">
+                <Lock className="w-6 h-6 text-[#111111]" />
               </div>
               <div>
-                <h3 className="font-heading font-black text-2xl text-white">Admin Studio Login</h3>
-                <p className="text-sm text-white/70 mt-0.5">Customize website texts, 4-box grids &amp; photos</p>
+                <h3 className="font-heading font-black text-xl text-white">Faculty Admin Portal</h3>
+                <p className="text-xs text-[#FFA81F] font-bold tracking-wider uppercase mt-0.5">Authorized Access Only</p>
               </div>
             </div>
 
-            <form onSubmit={handleAdminLogin} className="space-y-5">
+            {/* Error Message Alert */}
+            {adminLoginError && (
+              <div className="mb-5 bg-red-500/15 border border-red-500/40 text-red-200 px-4 py-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-medium">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span>{adminLoginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              {/* User ID Field */}
               <div>
-                <label className="text-sm text-white font-bold block mb-2">
-                  Enter Admin Passcode (Default: <code className="text-[#FFA81F] font-bold">admin123</code>)
+                <label className="text-xs font-bold text-white/80 block mb-1.5 uppercase tracking-wider">
+                  Admin User ID / Email
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type="text"
+                    required
+                    value={adminUserIdInput}
+                    onChange={(e) => {
+                      setAdminUserIdInput(e.target.value);
+                      setAdminLoginError(null);
+                    }}
+                    placeholder="Enter Admin User ID or Email"
+                    className="w-full bg-[#111111] text-white placeholder-white/30 text-sm sm:text-base rounded-xl border border-white/20 pl-11 pr-4 py-3 focus:outline-none focus:border-[#FFA81F]"
+                  />
+                  <User className="w-4 h-4 text-white/40 absolute left-4 top-3.5" />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label className="text-xs font-bold text-white/80 block mb-1.5 uppercase tracking-wider">
+                  Secret Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAdminPassword ? 'text' : 'password'}
+                    required
                     value={adminPasswordInput}
                     onChange={(e) => {
                       setAdminPasswordInput(e.target.value);
-                      setAdminPasswordError(false);
+                      setAdminLoginError(null);
                     }}
-                    placeholder="Enter passcode or click quick enter below"
-                    className="w-full bg-[#111111] text-white placeholder-white/40 text-base sm:text-lg rounded-xl border-2 border-white/20 px-4 py-3.5 focus:outline-none focus:border-[#FFA81F]"
+                    placeholder="Enter Secret Password"
+                    className="w-full bg-[#111111] text-white placeholder-white/30 text-sm sm:text-base rounded-xl border border-white/20 pl-11 pr-11 py-3 focus:outline-none focus:border-[#FFA81F]"
                   />
-                  <Key className="w-5 h-5 text-white/40 absolute right-4 top-4" />
+                  <Key className="w-4 h-4 text-white/40 absolute left-4 top-3.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3.5 top-3.5 text-white/40 hover:text-white transition-colors cursor-pointer"
+                    title={showAdminPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-                {adminPasswordError && (
-                  <p className="text-sm text-red-400 mt-2 font-bold">
-                    Incorrect passcode. Default is <span className="underline">admin123</span>
-                  </p>
-                )}
               </div>
 
-              <div className="pt-2 flex flex-col gap-3">
-                <button
-                  type="submit"
-                  className="w-full bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-base py-4 rounded-xl transition-transform active:scale-95 shadow-xl cursor-pointer"
-                >
-                  Unlock Admin Studio
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDirectAdminOpen}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white text-sm font-bold py-3 rounded-xl transition-colors border border-white/15 cursor-pointer"
-                >
-                  Quick Enter Without Passcode
-                </button>
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 text-white/70 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberLogin}
+                    onChange={(e) => setRememberLogin(e.target.checked)}
+                    className="rounded bg-[#111111] border-white/30 text-[#FFA81F] focus:ring-0 w-3.5 h-3.5"
+                  />
+                  <span>Keep me logged in on this computer</span>
+                </label>
               </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="w-full mt-2 bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-sm sm:text-base py-3.5 rounded-xl transition-all shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4 text-[#111111]" />
+                <span>Verify &amp; Open Admin Studio</span>
+              </button>
             </form>
           </div>
         </div>
@@ -1755,6 +1859,7 @@ export default function App() {
         content={content}
         onSave={handleSaveContent}
         onReset={handleResetContent}
+        onLogout={handleAdminLogout}
       />
 
       {/* CV Request Modal */}

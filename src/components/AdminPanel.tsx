@@ -38,7 +38,11 @@ import {
   Video,
   Play,
   Linkedin,
-  Youtube
+  Youtube,
+  LogOut,
+  Lock,
+  Key,
+  User
 } from 'lucide-react';
 import { getYouTubeEmbedUrl } from '../utils/youtube';
 
@@ -48,6 +52,7 @@ interface AdminPanelProps {
   content: PortfolioContent;
   onSave: (updated: PortfolioContent) => Promise<{ success: boolean; error?: string }> | void;
   onReset: () => void;
+  onLogout?: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -55,8 +60,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onClose,
   content,
   onSave,
-  onReset
+  onReset,
+  onLogout
 }) => {
+  const [securityCreds, setSecurityCreds] = useState<{ userId: string; password: string }>(() => {
+    try {
+      const stored = localStorage.getItem('smita_admin_credentials');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return { userId: 'pawarsmita1020@dypiu.ac.in', password: 'Smita@DYPIU2026' };
+  });
+  const [securitySaved, setSecuritySaved] = useState(false);
+
+  const handleSaveSecurity = () => {
+    try {
+      localStorage.setItem('smita_admin_credentials', JSON.stringify(securityCreds));
+      setSecuritySaved(true);
+      setTimeout(() => setSecuritySaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [data, setData] = useState<PortfolioContent>(() => ({
     ...content,
     featuredVideo: content.featuredVideo || {
@@ -368,6 +392,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <Eye className="w-5 h-5 text-[#FFA81F]" />
             <span className="hidden sm:inline">Preview Live Website</span>
           </button>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-100 font-bold text-sm sm:text-base px-4 py-3 rounded-2xl flex items-center gap-2 border border-red-500/30 transition-all cursor-pointer"
+              title="Log Out and Lock Admin Studio"
+            >
+              <LogOut className="w-5 h-5 text-red-400" />
+              <span className="hidden sm:inline">Log Out</span>
+            </button>
+          )}
 
           <button
             onClick={onClose}
@@ -2504,6 +2539,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   >
                     <Upload className="w-5 h-5" />
                     <span>Upload &amp; Restore Backup</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Admin Portal Security & Password Settings */}
+              <div className="bg-[#1C1C1C] p-6 sm:p-8 rounded-3xl border border-[#FFA81F]/30 space-y-5 shadow-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#FFA81F]/20 text-[#FFA81F] flex items-center justify-center">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-black text-xl text-white">
+                      Admin Portal Security &amp; Credentials
+                    </h3>
+                    <p className="text-sm text-white/70 mt-0.5">
+                      Configure your private User ID and Password used to log in at <code className="text-[#FFA81F] font-mono">?admin=login</code>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-xs font-bold text-white/80 uppercase block mb-1.5 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-[#FFA81F]" />
+                      <span>Admin User ID / Email</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={securityCreds.userId}
+                      onChange={(e) => setSecurityCreds({ ...securityCreds, userId: e.target.value })}
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-[#FFA81F] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-white/80 uppercase block mb-1.5 flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-[#FFA81F]" />
+                      <span>Admin Secret Password</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={securityCreds.password}
+                      onChange={(e) => setSecurityCreds({ ...securityCreds, password: e.target.value })}
+                      className="w-full bg-[#111111] border-2 border-white/20 rounded-xl px-4 py-3 text-base text-white focus:border-[#FFA81F] focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <p className="text-xs text-white/50">
+                    Secret URL: <span className="text-[#FFA81F] font-mono">yoursite.com/?admin=login</span> (or press <kbd className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">Ctrl+Shift+A</kbd>)
+                  </p>
+                  <button
+                    onClick={handleSaveSecurity}
+                    className="bg-[#FFA81F] hover:bg-[#E59415] text-[#111111] font-heading font-black text-sm py-2.5 px-6 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-[#111111]" />
+                    <span>{securitySaved ? '✓ Credentials Updated!' : 'Save New Credentials'}</span>
                   </button>
                 </div>
               </div>
