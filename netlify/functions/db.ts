@@ -5,7 +5,7 @@ let pool: mysql.Pool | null = null;
 export function getPool() {
   if (!pool) {
     pool = mysql.createPool({
-      host: process.env.DB_HOST || 'palegoldenrod-eagle-321259.hostingersite.com',
+      host: process.env.DB_HOST || 'srv2213.hstgr.io',
       user: process.env.DB_USER || 'u835254770_Smitaportfolio',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'u835254770_Smitaportfolio',
